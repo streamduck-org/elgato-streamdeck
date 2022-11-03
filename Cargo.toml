@@ -1,0 +1,11 @@
+[package]
+name = "elgato-streamdeck"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "test"
+path = "src/main.rs"
+
+[dependencies]
+hidapi = "1.4.2"
