@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 hidapi = "1.4.2"
+image = "0.24.4"

@@ -1,3 +1,4 @@
+use image::open;
 use crate::{new_hidapi, StreamDeck};
 
 #[test]
@@ -22,4 +23,9 @@ fn test_device() {
         device.firmware_version().unwrap()
     );
 
+    device.set_brightness(35).unwrap();
+
+    let image = open("no-place-like-localhost.jpg").unwrap();
+
+    device.set_button_image(7, image).unwrap();
 }

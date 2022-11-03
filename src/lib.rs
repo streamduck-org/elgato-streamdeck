@@ -6,8 +6,12 @@
 
 #![warn(missing_docs)]
 
-use std::str::{from_utf8, Utf8Error};
+use std::str::Utf8Error;
+
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
+use image::{DynamicImage, ImageError};
+use crate::images::convert_image;
+
 use crate::info::{ELGATO_VENDOR_ID, Kind};
 use crate::util::extract_str;
 
@@ -15,9 +19,12 @@ use crate::util::extract_str;
 pub mod info;
 /// Utility functions for working with Stream Deck devices
 pub mod util;
+/// Image processing functions
+pub mod images;
 
 #[cfg(test)]
 mod tests;
+
 
 /// Creates an instance of the HidApi
 ///
@@ -101,6 +108,16 @@ impl StreamDeck {
         Ok(buff)
     }
 
+    /// Performs send_feature_report on [HidDevice], for advanced use
+    pub fn send_feature_report(&mut self, payload: &[u8]) -> Result<(), StreamDeckError> {
+        Ok(self.device.send_feature_report(payload)?)
+    }
+
+    /// Writes data to [HidDevice], for advanced use
+    pub fn write_data(&mut self, payload: &[u8]) -> Result<usize, StreamDeckError> {
+        Ok(self.device.write(payload)?)
+    }
+
     /// Returns serial number of the device
     pub fn serial_number(&mut self) -> Result<String, StreamDeckError> {
         match self.kind {
@@ -128,12 +145,171 @@ impl StreamDeck {
                 let bytes = self.get_feature_report(0x04, 17)?;
                 Ok(extract_str(&bytes[5..])?)
             }
-            
+
             _ => {
                 let bytes = self.get_feature_report(0x05, 32)?;
                 Ok(extract_str(&bytes[6..])?)
             }
         }
+    }
+
+    /// Resets the device
+    pub fn reset(&mut self) -> Result<(), StreamDeckError> {
+        match self.kind {
+            Kind::Original | Kind::Mini | Kind::MiniMk2 => {
+                let mut buf = vec![0x0B, 0x63];
+
+                buf.extend(vec![0u8; 15]);
+
+                Ok(self.send_feature_report(buf.as_slice())?)
+            }
+
+            _ => {
+                let mut buf = vec![0x03, 0x02];
+
+                buf.extend(vec![0u8; 30]);
+
+                Ok(self.send_feature_report(buf.as_slice())?)
+            }
+        }
+    }
+
+    /// Sets brightness of the device, value range is 0 - 100
+    pub fn set_brightness(&mut self, percent: u8) -> Result<(), StreamDeckError> {
+        let percent = percent.max(0).min(100);
+
+        match self.kind {
+            Kind::Original | Kind::Mini | Kind::MiniMk2 => {
+                let mut buf = vec![
+                    0x05,
+                    0x55,
+                    0xaa,
+                    0xd1,
+                    0x01,
+                    percent
+                ];
+
+                buf.extend(vec![0u8; 11]);
+
+                Ok(self.send_feature_report(buf.as_slice())?)
+            }
+
+            _ => {
+                let mut buf = vec![
+                    0x03,
+                    0x08,
+                    percent
+                ];
+
+                buf.extend(vec![0u8; 29]);
+
+                Ok(self.send_feature_report(buf.as_slice())?)
+            }
+        }
+    }
+
+    /// Writes image data to Stream Deck device
+    pub fn write_image(&mut self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        if key >= self.kind.key_count() {
+            return Err(StreamDeckError::InvalidKeyIndex);
+        }
+
+        if !self.kind.is_visual() {
+            return Err(StreamDeckError::NoScreen);
+        }
+
+        let image_report_length = match self.kind {
+            Kind::Original => 8191,
+            _ => 1024
+        };
+
+        let image_report_header_length = match self.kind {
+            Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
+            _ => 8
+        };
+
+        let image_report_payload_length = match self.kind {
+            Kind::Original => image_data.len() / 2,
+            _ => image_report_length - image_report_header_length
+        };
+
+        let mut page_number = 0;
+        let mut bytes_remaining = image_data.len();
+
+        while bytes_remaining > 0 {
+            let this_length = bytes_remaining.min(image_report_payload_length);
+            let bytes_sent = page_number * image_report_payload_length;
+
+            // Selecting header based on device
+            let mut buf: Vec<u8> = match self.kind {
+                Kind::Original => vec![
+                    0x02,
+                    0x01,
+                    (page_number + 1) as u8,
+                    0,
+                    if this_length == bytes_remaining { 1 } else { 0 },
+                    key + 1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ],
+
+                Kind::Mini | Kind::MiniMk2 => vec![
+                    0x02,
+                    0x01,
+                    (page_number) as u8,
+                    0,
+                    if this_length == bytes_remaining { 1 } else { 0 },
+                    key + 1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ],
+
+                _ => vec![
+                    0x02,
+                    0x07,
+                    key,
+                    if this_length == bytes_remaining { 1 } else { 0 },
+                    (this_length & 0xff) as u8,
+                    (this_length >> 8) as u8,
+                    (page_number & 0xff) as u8,
+                    (page_number >> 8) as u8,
+                ]
+            };
+
+            buf.extend(&image_data[bytes_sent .. bytes_sent + this_length]);
+
+            // Adding padding
+            buf.extend(vec![0u8; image_report_length - buf.len()]);
+
+            self.write_data(&buf)?;
+
+            bytes_remaining -= this_length;
+            page_number += 1;
+        }
+
+        Ok(())
+    }
+
+    /// Sets specified button's image
+    pub fn set_button_image(&mut self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+        let image_data = convert_image(self.kind, image)?;
+        Ok(self.write_image(key, &image_data)?)
     }
 }
 
@@ -145,6 +321,15 @@ pub enum StreamDeckError {
 
     /// Failed to convert bytes into string
     Utf8Error(Utf8Error),
+
+    /// Failed to encode image
+    ImageError(ImageError),
+
+    /// There's literally nowhere to write the image
+    NoScreen,
+
+    /// Key index is invalid
+    InvalidKeyIndex,
 
     /// Unrecognized Product ID
     UnrecognizedPID,
@@ -159,5 +344,11 @@ impl From<HidError> for StreamDeckError {
 impl From<Utf8Error> for StreamDeckError {
     fn from(e: Utf8Error) -> Self {
         Self::Utf8Error(e)
+    }
+}
+
+impl From<ImageError> for StreamDeckError {
+    fn from(e: ImageError) -> Self {
+        Self::ImageError(e)
     }
 }
