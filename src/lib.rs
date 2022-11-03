@@ -6,13 +6,18 @@
 
 #![warn(missing_docs)]
 
-use hidapi::{HidApi, HidDevice, HidResult};
+use std::str::{from_utf8, Utf8Error};
+use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use crate::info::{ELGATO_VENDOR_ID, Kind};
+use crate::util::extract_str;
 
 /// Various information about Stream Deck devices
 pub mod info;
 /// Utility functions for working with Stream Deck devices
 pub mod util;
+
+#[cfg(test)]
+mod tests;
 
 /// Creates an instance of the HidApi
 ///
@@ -53,5 +58,106 @@ impl StreamDeck {
                 }
             })
             .collect()
+    }
+
+    /// Attempts to connect to the device
+    pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<StreamDeck, StreamDeckError> {
+        let device = hidapi.open_serial(ELGATO_VENDOR_ID, kind.product_id(), serial)?;
+
+        Ok(StreamDeck {
+            kind,
+            device
+        })
+    }
+}
+
+/// Instance methods of the struct
+impl StreamDeck {
+    /// Returns kind of the Stream Deck
+    pub fn kind(&self) -> Kind {
+        self.kind
+    }
+
+    /// Returns manufacturer string of the device
+    pub fn manufacturer(&mut self) -> Result<String, StreamDeckError> {
+        Ok(self.device.get_manufacturer_string()?.unwrap_or_else(|| "Unknown".to_string()))
+    }
+
+    /// Returns product string of the device
+    pub fn product(&mut self) -> Result<String, StreamDeckError> {
+        Ok(self.device.get_product_string()?.unwrap_or_else(|| "Unknown".to_string()))
+    }
+
+    /// Performs get_feature_report on [HidDevice], for advanced use
+    pub fn get_feature_report(&mut self, report_id: u8, length: usize) -> Result<Vec<u8>, StreamDeckError> {
+        let mut buff = vec![0u8; length];
+
+        // Inserting report id byte
+        buff.insert(0, report_id);
+
+        // Getting feature report
+        self.device.get_feature_report(buff.as_mut_slice())?;
+
+        Ok(buff)
+    }
+
+    /// Returns serial number of the device
+    pub fn serial_number(&mut self) -> Result<String, StreamDeckError> {
+        match self.kind {
+            Kind::Original | Kind::Mini => {
+                let bytes = self.get_feature_report(0x03, 17)?;
+                Ok(extract_str(&bytes[5..])?)
+            }
+
+            Kind::MiniMk2 => {
+                let bytes = self.get_feature_report(0x03, 32)?;
+                Ok(extract_str(&bytes[5..])?)
+            }
+
+            _ => {
+                let bytes = self.get_feature_report(0x06, 32)?;
+                Ok(extract_str(&bytes[2..])?)
+            }
+        }
+    }
+
+    /// Returns firmware version of the StreamDeck
+    pub fn firmware_version(&mut self) -> Result<String, StreamDeckError> {
+        match self.kind {
+            Kind::Original | Kind::Mini | Kind::MiniMk2 => {
+                let bytes = self.get_feature_report(0x04, 17)?;
+                Ok(extract_str(&bytes[5..])?)
+            }
+            
+            _ => {
+                let bytes = self.get_feature_report(0x05, 32)?;
+                Ok(extract_str(&bytes[6..])?)
+            }
+        }
+    }
+}
+
+/// Errors that can occur while working with Stream Decks
+#[derive(Debug)]
+pub enum StreamDeckError {
+    /// HidApi error
+    HidError(HidError),
+
+    /// Failed to convert bytes into string
+    Utf8Error(Utf8Error),
+
+    /// Unrecognized Product ID
+    UnrecognizedPID,
+}
+
+impl From<HidError> for StreamDeckError {
+    fn from(e: HidError) -> Self {
+        Self::HidError(e)
+    }
+}
+
+impl From<Utf8Error> for StreamDeckError {
+    fn from(e: Utf8Error) -> Self {
+        Self::Utf8Error(e)
     }
 }
