@@ -7,13 +7,14 @@
 #![warn(missing_docs)]
 
 use std::str::Utf8Error;
+use std::time::Duration;
 
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use image::{DynamicImage, ImageError};
 use crate::images::convert_image;
 
 use crate::info::{ELGATO_VENDOR_ID, Kind};
-use crate::util::extract_str;
+use crate::util::{extract_str, flip_key_index, get_feature_report, read_data, send_feature_report, write_data};
 
 /// Various information about Stream Deck devices
 pub mod info;
@@ -24,7 +25,6 @@ pub mod images;
 
 #[cfg(test)]
 mod tests;
-
 
 /// Creates an instance of the HidApi
 ///
@@ -95,44 +95,21 @@ impl StreamDeck {
         Ok(self.device.get_product_string()?.unwrap_or_else(|| "Unknown".to_string()))
     }
 
-    /// Performs get_feature_report on [HidDevice], for advanced use
-    pub fn get_feature_report(&mut self, report_id: u8, length: usize) -> Result<Vec<u8>, StreamDeckError> {
-        let mut buff = vec![0u8; length];
-
-        // Inserting report id byte
-        buff.insert(0, report_id);
-
-        // Getting feature report
-        self.device.get_feature_report(buff.as_mut_slice())?;
-
-        Ok(buff)
-    }
-
-    /// Performs send_feature_report on [HidDevice], for advanced use
-    pub fn send_feature_report(&mut self, payload: &[u8]) -> Result<(), StreamDeckError> {
-        Ok(self.device.send_feature_report(payload)?)
-    }
-
-    /// Writes data to [HidDevice], for advanced use
-    pub fn write_data(&mut self, payload: &[u8]) -> Result<usize, StreamDeckError> {
-        Ok(self.device.write(payload)?)
-    }
-
     /// Returns serial number of the device
     pub fn serial_number(&mut self) -> Result<String, StreamDeckError> {
         match self.kind {
             Kind::Original | Kind::Mini => {
-                let bytes = self.get_feature_report(0x03, 17)?;
+                let bytes = get_feature_report(&mut self.device, 0x03, 17)?;
                 Ok(extract_str(&bytes[5..])?)
             }
 
             Kind::MiniMk2 => {
-                let bytes = self.get_feature_report(0x03, 32)?;
+                let bytes = get_feature_report(&mut self.device, 0x03, 32)?;
                 Ok(extract_str(&bytes[5..])?)
             }
 
             _ => {
-                let bytes = self.get_feature_report(0x06, 32)?;
+                let bytes = get_feature_report(&mut self.device, 0x06, 32)?;
                 Ok(extract_str(&bytes[2..])?)
             }
         }
@@ -142,15 +119,61 @@ impl StreamDeck {
     pub fn firmware_version(&mut self) -> Result<String, StreamDeckError> {
         match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
-                let bytes = self.get_feature_report(0x04, 17)?;
+                let bytes = get_feature_report(&mut self.device, 0x04, 17)?;
                 Ok(extract_str(&bytes[5..])?)
             }
 
             _ => {
-                let bytes = self.get_feature_report(0x05, 32)?;
+                let bytes = get_feature_report(&mut self.device, 0x05, 32)?;
                 Ok(extract_str(&bytes[6..])?)
             }
         }
+    }
+
+    /// Reads button states, empty vector if no data
+    pub fn read_button_states(&mut self, timeout: Option<Duration>) -> Result<Vec<bool>, StreamDeckError> {
+        let states = match self.kind {
+            Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(
+                &mut self.device,
+                1 + self.kind.key_count() as usize,
+                timeout
+            ),
+            _ => read_data(
+                &mut self.device,
+                4 + self.kind.key_count() as usize,
+                timeout
+            )
+        }?;
+
+        if states[0] == 0 {
+            return Ok(vec![])
+        }
+
+        Ok(match self.kind {
+            Kind::Original => {
+                let mut bools = vec![];
+
+                for i in 0..self.kind.key_count() {
+                    let flipped_i = flip_key_index(self.kind, i) as usize;
+
+                    bools.push(states[flipped_i + 1] != 0);
+                }
+
+                bools
+            }
+
+            Kind::Mini | Kind::MiniMk2 => {
+                states[1..].iter()
+                    .map(|s| *s != 0)
+                    .collect()
+            }
+
+            _ => {
+                states[4..].iter()
+                    .map(|s| *s != 0)
+                    .collect()
+            }
+        })
     }
 
     /// Resets the device
@@ -161,7 +184,7 @@ impl StreamDeck {
 
                 buf.extend(vec![0u8; 15]);
 
-                Ok(self.send_feature_report(buf.as_slice())?)
+                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
             }
 
             _ => {
@@ -169,7 +192,7 @@ impl StreamDeck {
 
                 buf.extend(vec![0u8; 30]);
 
-                Ok(self.send_feature_report(buf.as_slice())?)
+                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
             }
         }
     }
@@ -191,7 +214,7 @@ impl StreamDeck {
 
                 buf.extend(vec![0u8; 11]);
 
-                Ok(self.send_feature_report(buf.as_slice())?)
+                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
             }
 
             _ => {
@@ -203,7 +226,7 @@ impl StreamDeck {
 
                 buf.extend(vec![0u8; 29]);
 
-                Ok(self.send_feature_report(buf.as_slice())?)
+                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
             }
         }
     }
@@ -213,6 +236,12 @@ impl StreamDeck {
         if key >= self.kind.key_count() {
             return Err(StreamDeckError::InvalidKeyIndex);
         }
+
+        let key = if let Kind::Original = self.kind {
+            flip_key_index(self.kind, key)
+        } else {
+            key
+        };
 
         if !self.kind.is_visual() {
             return Err(StreamDeckError::NoScreen);
@@ -297,13 +326,18 @@ impl StreamDeck {
             // Adding padding
             buf.extend(vec![0u8; image_report_length - buf.len()]);
 
-            self.write_data(&buf)?;
+            write_data(&mut self.device, &buf)?;
 
             bytes_remaining -= this_length;
             page_number += 1;
         }
 
         Ok(())
+    }
+
+    /// Sets button's image to blank
+    pub fn clear_button_image(&mut self, key: u8) -> Result<(), StreamDeckError> {
+        Ok(self.write_image(key, &self.kind.blank_image())?)
     }
 
     /// Sets specified button's image

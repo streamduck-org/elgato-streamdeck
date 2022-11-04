@@ -1,3 +1,4 @@
+use std::time::Duration;
 use image::open;
 use crate::{new_hidapi, StreamDeck};
 
@@ -28,4 +29,10 @@ fn test_device() {
     let image = open("no-place-like-localhost.jpg").unwrap();
 
     device.set_button_image(7, image).unwrap();
+
+    println!("Reading some key states...");
+
+    for _ in 0..20 {
+        println!("{:?}", device.read_button_states(Some(Duration::MAX)).unwrap())
+    }
 }
