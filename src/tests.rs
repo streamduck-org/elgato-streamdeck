@@ -26,6 +26,10 @@ fn test_device() {
 
     device.set_brightness(35).unwrap();
 
+    for i in 0..device.kind().key_count() {
+        device.clear_button_image(i).unwrap();
+    }
+
     let image = open("no-place-like-localhost.jpg").unwrap();
 
     device.set_button_image(7, image).unwrap();

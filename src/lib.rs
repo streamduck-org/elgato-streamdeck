@@ -41,7 +41,7 @@ pub struct StreamDeck {
     device: HidDevice,
 }
 
-/// Static functions of the struct (looking up devices, connecting)
+/// Static functions of the struct
 impl StreamDeck {
     /// Returns a list of devices as (Kind, Serial Number) that could be found using HidApi
     pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
@@ -130,7 +130,7 @@ impl StreamDeck {
         }
     }
 
-    /// Reads button states, empty vector if no data
+    /// Reads button states, empty vector if no data. Non-blocking if no timeout
     pub fn read_button_states(&mut self, timeout: Option<Duration>) -> Result<Vec<bool>, StreamDeckError> {
         let states = match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(
