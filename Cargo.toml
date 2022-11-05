@@ -1,7 +1,12 @@
 [package]
 name = "elgato-streamdeck"
+authors = ["TheJebForge"]
 version = "0.1.0"
 edition = "2021"
+readme = "README.md"
+homepage = "https://github.com/streamduck-org"
+license = "MPL-2.0"
+
 
 [dependencies]
 hidapi = "1.4.2"
