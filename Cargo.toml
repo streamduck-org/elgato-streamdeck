@@ -1,5 +1,6 @@
 [package]
 name = "elgato-streamdeck"
+description = "HidApi driver for Elgato Stream Decks"
 authors = ["TheJebForge"]
 version = "0.1.0"
 edition = "2021"
