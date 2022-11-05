@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2021"
 readme = "README.md"
 homepage = "https://github.com/streamduck-org"
+repository = "https://github.com/streamduck-org/elgato-streamdeck"
 license = "MPL-2.0"
 
 
