@@ -37,7 +37,7 @@ device.set_button_image(7, image).unwrap();
 
 ## Status
 - [x] Convenient to use API for looking up devices, connecting to them and interacting with them
-- [ ] Reading buttons with async
+- [x] Reading buttons with async
 
 
 ## Supported Devices
