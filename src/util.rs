@@ -4,7 +4,7 @@ use hidapi::{HidDevice, HidError};
 use crate::Kind;
 
 /// Performs get_feature_report on [HidDevice]
-pub fn get_feature_report(device: &mut HidDevice, report_id: u8, length: usize) -> Result<Vec<u8>, HidError> {
+pub fn get_feature_report(device: &HidDevice, report_id: u8, length: usize) -> Result<Vec<u8>, HidError> {
     let mut buff = vec![0u8; length];
 
     // Inserting report id byte
@@ -17,12 +17,12 @@ pub fn get_feature_report(device: &mut HidDevice, report_id: u8, length: usize) 
 }
 
 /// Performs send_feature_report on [HidDevice]
-pub fn send_feature_report(device: &mut HidDevice, payload: &[u8]) -> Result<(), HidError> {
+pub fn send_feature_report(device: &HidDevice, payload: &[u8]) -> Result<(), HidError> {
     Ok(device.send_feature_report(payload)?)
 }
 
 /// Reads data from [HidDevice]. Blocking mode is used if timeout is specified
-pub fn read_data(device: &mut HidDevice, length: usize, timeout: Option<Duration>) -> Result<Vec<u8>, HidError> {
+pub fn read_data(device: &HidDevice, length: usize, timeout: Option<Duration>) -> Result<Vec<u8>, HidError> {
     device.set_blocking_mode(timeout.is_some())?;
 
     let mut buf = vec![0u8; length];
@@ -36,7 +36,7 @@ pub fn read_data(device: &mut HidDevice, length: usize, timeout: Option<Duration
 }
 
 /// Writes data to [HidDevice]
-pub fn write_data(device: &mut HidDevice, payload: &[u8]) -> Result<usize, HidError> {
+pub fn write_data(device: &HidDevice, payload: &[u8]) -> Result<usize, HidError> {
     Ok(device.write(payload)?)
 }
 

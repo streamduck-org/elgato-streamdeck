@@ -4,6 +4,7 @@
 //! Heavily based on [python-elgato-streamdeck](https://github.com/abcminiuser/python-elgato-streamdeck) and partially on
 //! [streamdeck library for rust](https://github.com/ryankurte/rust-streamdeck).
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
 use std::str::Utf8Error;
@@ -23,6 +24,14 @@ pub mod util;
 /// Image processing functions
 pub mod images;
 
+/// Async Stream Deck
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub mod asynchronous;
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub use asynchronous::AsyncStreamDeck;
+
 #[cfg(test)]
 mod tests;
 
@@ -31,6 +40,30 @@ mod tests;
 /// Can be used if you don't want to link hidapi crate into your project
 pub fn new_hidapi() -> HidResult<HidApi> {
     HidApi::new()
+}
+
+/// Returns a list of devices as (Kind, Serial Number) that could be found using HidApi
+pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
+    hidapi.device_list()
+        .filter_map(|d| {
+            if d.vendor_id() != ELGATO_VENDOR_ID {
+                return None;
+            }
+
+            if let Some(serial) = d.serial_number() {
+                if !serial.chars().all(|c| c.is_alphanumeric()) {
+                    return None;
+                }
+
+                Some((
+                    Kind::from_pid(d.product_id())?,
+                    serial.to_string()
+                ))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// Interface for a Stream Deck device
@@ -43,30 +76,6 @@ pub struct StreamDeck {
 
 /// Static functions of the struct
 impl StreamDeck {
-    /// Returns a list of devices as (Kind, Serial Number) that could be found using HidApi
-    pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
-        hidapi.device_list()
-            .filter_map(|d| {
-                if d.vendor_id() != ELGATO_VENDOR_ID {
-                    return None;
-                }
-
-                if let Some(serial) = d.serial_number() {
-                    if !serial.chars().all(|c| c.is_alphanumeric()) {
-                        return None;
-                    }
-
-                    Some((
-                        Kind::from_pid(d.product_id())?,
-                        serial.to_string()
-                    ))
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
     /// Attempts to connect to the device
     pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<StreamDeck, StreamDeckError> {
         let device = hidapi.open_serial(ELGATO_VENDOR_ID, kind.product_id(), serial)?;
@@ -86,60 +95,60 @@ impl StreamDeck {
     }
 
     /// Returns manufacturer string of the device
-    pub fn manufacturer(&mut self) -> Result<String, StreamDeckError> {
+    pub fn manufacturer(&self) -> Result<String, StreamDeckError> {
         Ok(self.device.get_manufacturer_string()?.unwrap_or_else(|| "Unknown".to_string()))
     }
 
     /// Returns product string of the device
-    pub fn product(&mut self) -> Result<String, StreamDeckError> {
+    pub fn product(&self) -> Result<String, StreamDeckError> {
         Ok(self.device.get_product_string()?.unwrap_or_else(|| "Unknown".to_string()))
     }
 
     /// Returns serial number of the device
-    pub fn serial_number(&mut self) -> Result<String, StreamDeckError> {
+    pub fn serial_number(&self) -> Result<String, StreamDeckError> {
         match self.kind {
             Kind::Original | Kind::Mini => {
-                let bytes = get_feature_report(&mut self.device, 0x03, 17)?;
+                let bytes = get_feature_report(&self.device, 0x03, 17)?;
                 Ok(extract_str(&bytes[5..])?)
             }
 
             Kind::MiniMk2 => {
-                let bytes = get_feature_report(&mut self.device, 0x03, 32)?;
+                let bytes = get_feature_report(&self.device, 0x03, 32)?;
                 Ok(extract_str(&bytes[5..])?)
             }
 
             _ => {
-                let bytes = get_feature_report(&mut self.device, 0x06, 32)?;
+                let bytes = get_feature_report(&self.device, 0x06, 32)?;
                 Ok(extract_str(&bytes[2..])?)
             }
         }
     }
 
     /// Returns firmware version of the StreamDeck
-    pub fn firmware_version(&mut self) -> Result<String, StreamDeckError> {
+    pub fn firmware_version(&self) -> Result<String, StreamDeckError> {
         match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
-                let bytes = get_feature_report(&mut self.device, 0x04, 17)?;
+                let bytes = get_feature_report(&self.device, 0x04, 17)?;
                 Ok(extract_str(&bytes[5..])?)
             }
 
             _ => {
-                let bytes = get_feature_report(&mut self.device, 0x05, 32)?;
+                let bytes = get_feature_report(&self.device, 0x05, 32)?;
                 Ok(extract_str(&bytes[6..])?)
             }
         }
     }
 
     /// Reads button states, empty vector if no data. Non-blocking if no timeout
-    pub fn read_button_states(&mut self, timeout: Option<Duration>) -> Result<Vec<bool>, StreamDeckError> {
+    pub fn read_button_states(&self, timeout: Option<Duration>) -> Result<Vec<bool>, StreamDeckError> {
         let states = match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(
-                &mut self.device,
+                &self.device,
                 1 + self.kind.key_count() as usize,
                 timeout
             ),
             _ => read_data(
-                &mut self.device,
+                &self.device,
                 4 + self.kind.key_count() as usize,
                 timeout
             )
@@ -177,14 +186,14 @@ impl StreamDeck {
     }
 
     /// Resets the device
-    pub fn reset(&mut self) -> Result<(), StreamDeckError> {
+    pub fn reset(&self) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
                 let mut buf = vec![0x0B, 0x63];
 
                 buf.extend(vec![0u8; 15]);
 
-                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
+                Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
 
             _ => {
@@ -192,13 +201,13 @@ impl StreamDeck {
 
                 buf.extend(vec![0u8; 30]);
 
-                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
+                Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
         }
     }
 
     /// Sets brightness of the device, value range is 0 - 100
-    pub fn set_brightness(&mut self, percent: u8) -> Result<(), StreamDeckError> {
+    pub fn set_brightness(&self, percent: u8) -> Result<(), StreamDeckError> {
         let percent = percent.max(0).min(100);
 
         match self.kind {
@@ -214,7 +223,7 @@ impl StreamDeck {
 
                 buf.extend(vec![0u8; 11]);
 
-                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
+                Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
 
             _ => {
@@ -226,13 +235,13 @@ impl StreamDeck {
 
                 buf.extend(vec![0u8; 29]);
 
-                Ok(send_feature_report(&mut self.device, buf.as_slice())?)
+                Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
         }
     }
 
     /// Writes image data to Stream Deck device
-    pub fn write_image(&mut self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+    pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         if key >= self.kind.key_count() {
             return Err(StreamDeckError::InvalidKeyIndex);
         }
@@ -326,7 +335,7 @@ impl StreamDeck {
             // Adding padding
             buf.extend(vec![0u8; image_report_length - buf.len()]);
 
-            write_data(&mut self.device, &buf)?;
+            write_data(&self.device, &buf)?;
 
             bytes_remaining -= this_length;
             page_number += 1;
@@ -336,12 +345,12 @@ impl StreamDeck {
     }
 
     /// Sets button's image to blank
-    pub fn clear_button_image(&mut self, key: u8) -> Result<(), StreamDeckError> {
+    pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         Ok(self.write_image(key, &self.kind.blank_image())?)
     }
 
     /// Sets specified button's image
-    pub fn set_button_image(&mut self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+    pub fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
         let image_data = convert_image(self.kind, image)?;
         Ok(self.write_image(key, &image_data)?)
     }
@@ -358,6 +367,11 @@ pub enum StreamDeckError {
 
     /// Failed to encode image
     ImageError(ImageError),
+
+    #[cfg(feature = "async")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+    /// Tokio join error
+    JoinError(tokio::task::JoinError),
 
     /// There's literally nowhere to write the image
     NoScreen,
@@ -384,5 +398,12 @@ impl From<Utf8Error> for StreamDeckError {
 impl From<ImageError> for StreamDeckError {
     fn from(e: ImageError) -> Self {
         Self::ImageError(e)
+    }
+}
+
+#[cfg(feature = "async")]
+impl From<tokio::task::JoinError> for StreamDeckError {
+    fn from(e: tokio::task::JoinError) -> Self {
+        Self::JoinError(e)
     }
 }

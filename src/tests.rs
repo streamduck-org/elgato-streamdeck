@@ -1,21 +1,23 @@
-use std::time::Duration;
+use std::ops::Add;
+use std::thread;
+use std::time::{Duration, Instant};
 use image::open;
-use crate::{new_hidapi, StreamDeck};
+use crate::{convert_image, list_devices, new_hidapi, StreamDeck};
 
 #[test]
 fn test_list_devices() {
     let hid = new_hidapi().expect("No hidapi");
 
-    println!("{:?}", StreamDeck::list_devices(&hid))
+    println!("{:?}", list_devices(&hid))
 }
 
 #[test]
 fn test_device() {
     let hid = new_hidapi().expect("No hidapi");
 
-    let (kind, serial) = StreamDeck::list_devices(&hid).remove(0);
+    let (kind, serial) = list_devices(&hid).remove(0);
 
-    let mut device = StreamDeck::connect(&hid, kind, &serial)
+    let device = StreamDeck::connect(&hid, kind, &serial)
         .expect("Failed to connect");
 
     println!(

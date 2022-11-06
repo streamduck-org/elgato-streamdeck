@@ -1,9 +1,10 @@
+use image::{ColorType, DynamicImage, ImageError};
 use image::codecs::bmp::BmpEncoder;
 use image::codecs::jpeg::JpegEncoder;
-use image::{ColorType, DynamicImage, ImageError};
 use image::imageops::FilterType;
-use crate::info::{ImageMirroring, ImageMode, ImageRotation};
+
 use crate::Kind;
+use crate::info::{ImageMirroring, ImageMode, ImageRotation};
 
 /// Converts image into image data depending on provided kind of device
 pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageError> {
@@ -30,7 +31,7 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
         ImageMirroring::Both => image.fliph().flipv()
     };
 
-    let mut image_data = image.into_rgb8().to_vec();
+    let image_data = image.into_rgb8().to_vec();
 
     // Encoding image
     match image_format.mode {
@@ -48,4 +49,11 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
             Ok(buf)
         }
     }
+}
+
+/// Converts image into image data depending on provided kind of device, suitable for use in async context
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub async fn convert_image_async(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, crate::StreamDeckError> {
+    Ok(tokio::task::spawn_blocking(move || convert_image(kind, image)).await??)
 }
