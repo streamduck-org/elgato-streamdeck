@@ -7,6 +7,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
 use std::time::Duration;
 
@@ -382,6 +384,14 @@ pub enum StreamDeckError {
     /// Unrecognized Product ID
     UnrecognizedPID,
 }
+
+impl Display for StreamDeckError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Error for StreamDeckError {}
 
 impl From<HidError> for StreamDeckError {
     fn from(e: HidError) -> Self {
