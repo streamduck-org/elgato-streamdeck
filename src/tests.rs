@@ -3,8 +3,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 use image::open;
 use crate::{convert_image, list_devices, new_hidapi, StreamDeck};
+use serial_test::serial;
 
 #[test]
+#[serial]
 fn test_list_devices() {
     let hid = new_hidapi().expect("No hidapi");
 
@@ -12,6 +14,7 @@ fn test_list_devices() {
 }
 
 #[test]
+#[serial]
 fn test_device() {
     let hid = new_hidapi().expect("No hidapi");
 
