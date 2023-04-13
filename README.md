@@ -41,7 +41,7 @@ device.set_button_image(7, image).unwrap();
 
 
 ## Supported Devices
-Support of the devices is the same as from libraries above, I only personally tested Original v2. 
+Support of the devices is the same as from libraries above, I personally tested Original v2 and Plus. 
 I'll just keep updating this library to match upstream libraries.
 
 But as it stands, this library should support following devices:
@@ -53,4 +53,4 @@ But as it stands, this library should support following devices:
 - Stream Deck Mini Mk2
 - Stream Deck Mk2
 - Stream Deck Pedal
-- Stream Deck Plus
+- Stream Deck Plus (thanks to [node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck))
