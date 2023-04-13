@@ -1,9 +1,9 @@
-use image::{ColorType, DynamicImage, ImageError};
+use image::{ColorType, DynamicImage, GenericImageView, ImageError};
 use image::codecs::bmp::BmpEncoder;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 
-use crate::Kind;
+use crate::{Kind, StreamDeckError};
 use crate::info::{ImageMirroring, ImageMode, ImageRotation};
 
 /// Converts image into image data depending on provided kind of device
@@ -44,7 +44,7 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
         }
         ImageMode::JPEG => {
             let mut buf = Vec::new();
-            let mut encoder = JpegEncoder::new_with_quality(&mut buf, 100);
+            let mut encoder = JpegEncoder::new_with_quality(&mut buf, 90);
             encoder.encode(&image_data, ws as u32, hs as u32, ColorType::Rgb8)?;
             Ok(buf)
         }
@@ -56,4 +56,42 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub async fn convert_image_async(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, crate::StreamDeckError> {
     Ok(tokio::task::spawn_blocking(move || convert_image(kind, image)).await??)
+}
+
+/// Rect to be used when trying to send image to lcd screen
+pub struct ImageRect {
+    /// Width of the image
+    pub w: u16,
+
+    /// Height of the image
+    pub h: u16,
+
+    /// Data of the image row by row as RGB
+    pub data: Vec<u8>
+}
+
+impl ImageRect {
+    /// Converts image to image rect
+    pub fn from_image(image: DynamicImage) -> Result<ImageRect, StreamDeckError> {
+        let (image_w, image_h) = image.dimensions();
+
+        let image_data = image.into_rgb8().to_vec();
+
+        let mut buf = Vec::new();
+        let mut encoder = JpegEncoder::new_with_quality(&mut buf, 90);
+        encoder.encode(&image_data, image_w, image_h, ColorType::Rgb8)?;
+
+        Ok(ImageRect {
+            w: image_w as u16,
+            h: image_h as u16,
+            data: buf,
+        })
+    }
+
+    /// Converts image to image rect, using async
+    #[cfg(feature = "async")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+    pub async fn from_image_async(image: DynamicImage) -> Result<ImageRect, StreamDeckError> {
+        Ok(tokio::task::spawn_blocking(move || ImageRect::from_image(image)).await??)
+    }
 }

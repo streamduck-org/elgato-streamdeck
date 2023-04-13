@@ -37,11 +37,23 @@ fn test_device() {
 
     let image = open("no-place-like-localhost.jpg").unwrap();
 
-    device.set_button_image(7, image).unwrap();
+    let decoded = convert_image(device.kind(), image).unwrap();
 
     println!("Reading some key states...");
 
-    for _ in 0..20 {
-        println!("{:?}", device.read_button_states(Some(Duration::MAX)).unwrap())
+    let display_image = |states: Vec<bool>| {
+        states.iter().enumerate()
+            .for_each(|(index, state)| {
+                let _ = if *state {
+                    device.write_image(index as u8, &decoded)
+                } else {
+                    device.clear_button_image(index as u8)
+                };
+            });
+    };
+
+    for _ in 0..30 {
+        let states = device.read_button_states(Some(Duration::MAX)).unwrap();
+        display_image(states);
     }
 }

@@ -14,10 +14,10 @@ use std::time::Duration;
 
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use image::{DynamicImage, ImageError};
-use crate::images::convert_image;
+use crate::images::{convert_image, ImageRect};
 
 use crate::info::{ELGATO_VENDOR_ID, Kind};
-use crate::util::{extract_str, flip_key_index, get_feature_report, read_data, send_feature_report, write_data};
+use crate::util::{extract_str, flip_key_index, get_feature_report, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data};
 
 /// Various information about Stream Deck devices
 pub mod info;
@@ -66,6 +66,28 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
             }
         })
         .collect()
+}
+
+/// Type of input that the device produced
+#[derive(Clone, Debug)]
+pub enum StreamDeckInput {
+    /// Button was pressed
+    ButtonStateChange(Vec<bool>),
+
+    /// Encoder/Knob was pressed
+    EncoderStateChange(Vec<bool>),
+
+    /// Encoder/Knob was twisted/turned
+    EncoderTwist(Vec<i8>),
+
+    /// Touch screen received short press
+    TouchScreenPress(u16, u16),
+
+    /// Touch screen received long press
+    TouchScreenLongPress(u16, u16),
+
+    /// Touch screen received a swipe
+    TouchScreenSwipe((u16, u16), (u16, u16)),
 }
 
 /// Interface for a Stream Deck device
@@ -141,50 +163,52 @@ impl StreamDeck {
         }
     }
 
-    /// Reads button states, empty vector if no data. Non-blocking if no timeout
-    pub fn read_button_states(&self, timeout: Option<Duration>) -> Result<Vec<bool>, StreamDeckError> {
-        let states = match self.kind {
-            Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(
-                &self.device,
-                1 + self.kind.key_count() as usize,
-                timeout
-            ),
-            _ => read_data(
-                &self.device,
-                4 + self.kind.key_count() as usize,
-                timeout
-            )
-        }?;
+    /// Reads all possible input from Stream Deck device
+    pub fn read_input(&self, timeout: Option<Duration>) -> Result<StreamDeckInput, StreamDeckError> {
+        match &self.kind {
+            Kind::Plus => {
+                let data = read_data(
+                    &self.device,
+                    14.max(5 + self.kind.encoder_count() as usize),
+                    timeout
+                )?;
 
-        if states[0] == 0 {
-            return Ok(vec![])
-        }
+                match &data[1] {
+                    0x0 => Ok(StreamDeckInput::ButtonStateChange(
+                        read_button_states(&self.kind, &data)
+                    )),
 
-        Ok(match self.kind {
-            Kind::Original => {
-                let mut bools = vec![];
+                    0x2 => Ok(
+                        read_lcd_input(&data)?
+                    ),
 
-                for i in 0..self.kind.key_count() {
-                    let flipped_i = flip_key_index(self.kind, i) as usize;
+                    0x3 => Ok(
+                        read_encoder_input(&self.kind, &data)?
+                    ),
 
-                    bools.push(states[flipped_i + 1] != 0);
+                    _ => Err(StreamDeckError::BadData)
                 }
-
-                bools
-            }
-
-            Kind::Mini | Kind::MiniMk2 => {
-                states[1..].iter()
-                    .map(|s| *s != 0)
-                    .collect()
             }
 
             _ => {
-                states[4..].iter()
-                    .map(|s| *s != 0)
-                    .collect()
+                let data = match self.kind {
+                    Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(
+                        &self.device,
+                        1 + self.kind.key_count() as usize,
+                        timeout
+                    ),
+                    _ => read_data(
+                        &self.device,
+                        4 + self.kind.key_count() as usize,
+                        timeout
+                    )
+                }?;
+
+                Ok(StreamDeckInput::ButtonStateChange(
+                    read_button_states(&self.kind, &data)
+                ))
             }
-        })
+        }
     }
 
     /// Resets the device
@@ -249,7 +273,7 @@ impl StreamDeck {
         }
 
         let key = if let Kind::Original = self.kind {
-            flip_key_index(self.kind, key)
+            flip_key_index(&self.kind, key)
         } else {
             key
         };
@@ -346,6 +370,62 @@ impl StreamDeck {
         Ok(())
     }
 
+    /// Writes image data to Stream Deck device's lcd strip/screen
+    pub fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
+        if !match self.kind {
+            Kind::Plus => true,
+            _ => false
+        } {
+            return Err(StreamDeckError::UnsupportedOperation)
+        }
+
+        let image_report_length = 1024;
+
+        let image_report_header_length = 16;
+
+        let image_report_payload_length = image_report_length - image_report_header_length;
+
+        let mut page_number = 0;
+        let mut bytes_remaining = rect.data.len();
+
+        while bytes_remaining > 0 {
+            let this_length = bytes_remaining.min(image_report_payload_length);
+            let bytes_sent = page_number * image_report_payload_length;
+
+            // Selecting header based on device
+            let mut buf: Vec<u8> = vec![
+                0x02,
+                0x0c,
+                (x & 0xff) as u8,
+                (x >> 8) as u8,
+                (y & 0xff) as u8,
+                (y >> 8) as u8,
+                (rect.w & 0xff) as u8,
+                (rect.w >> 8) as u8,
+                (rect.h & 0xff) as u8,
+                (rect.h >> 8) as u8,
+                if bytes_remaining <= image_report_payload_length { 1 } else { 0 },
+                (page_number & 0xff) as u8,
+                (page_number >> 8) as u8,
+                (this_length & 0xff) as u8,
+                (this_length >> 8) as u8,
+                0
+            ];
+
+            buf.extend(&rect.data[bytes_sent .. bytes_sent + this_length]);
+
+            // Adding padding
+            buf.extend(vec![0u8; image_report_length - buf.len()]);
+
+            write_data(&self.device, &buf)?;
+
+            bytes_remaining -= this_length;
+            page_number += 1;
+        }
+
+        Ok(())
+    }
+
     /// Sets button's image to blank
     pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         Ok(self.write_image(key, &self.kind.blank_image())?)
@@ -383,6 +463,12 @@ pub enum StreamDeckError {
 
     /// Unrecognized Product ID
     UnrecognizedPID,
+
+    /// The device doesn't support doing that
+    UnsupportedOperation,
+
+    /// Stream Deck sent unexpected data
+    BadData,
 }
 
 impl Display for StreamDeckError {
