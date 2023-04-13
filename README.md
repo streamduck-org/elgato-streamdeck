@@ -53,3 +53,4 @@ But as it stands, this library should support following devices:
 - Stream Deck Mini Mk2
 - Stream Deck Mk2
 - Stream Deck Pedal
+- Stream Deck Plus
