@@ -71,6 +71,9 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
 /// Type of input that the device produced
 #[derive(Clone, Debug)]
 pub enum StreamDeckInput {
+    /// No data was passed from the device
+    NoData,
+
     /// Button was pressed
     ButtonStateChange(Vec<bool>),
 
@@ -88,6 +91,17 @@ pub enum StreamDeckInput {
 
     /// Touch screen received a swipe
     TouchScreenSwipe((u16, u16), (u16, u16)),
+}
+
+impl StreamDeckInput {
+    /// Checks if there's data received or not
+    pub fn is_empty(&self) -> bool {
+        if let StreamDeckInput::NoData = self {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 /// Interface for a Stream Deck device
@@ -173,6 +187,10 @@ impl StreamDeck {
                     timeout
                 )?;
 
+                if data[0] == 0 {
+                    return Ok(StreamDeckInput::NoData);
+                }
+
                 match &data[1] {
                     0x0 => Ok(StreamDeckInput::ButtonStateChange(
                         read_button_states(&self.kind, &data)
@@ -203,6 +221,10 @@ impl StreamDeck {
                         timeout
                     )
                 }?;
+
+                if data[0] == 0 {
+                    return Ok(StreamDeckInput::NoData);
+                }
 
                 Ok(StreamDeckInput::ButtonStateChange(
                     read_button_states(&self.kind, &data)
