@@ -113,19 +113,19 @@ impl AsyncStreamDeck {
         }).await??)
     }
 
-    /// Writes image data to Stream Deck device
-    pub async fn write_image(&self, key: u8, image_data: &'static [u8]) -> Result<(), StreamDeckError> {
+    /// Writes image data to Stream Deck device, needs to accept Arc for image data since it runs a blocking thread under the hood
+    pub async fn write_image(&self, key: u8, image_data: Arc<Vec<u8>>) -> Result<(), StreamDeckError> {
         let device = self.device.clone().lock_owned().await;
         Ok(tokio::task::spawn_blocking(move || {
-            device.write_image(key, image_data)
+            device.write_image(key, image_data.as_slice())
         }).await??)
     }
 
-    /// Writes image data to Stream Deck device's lcd strip/screen
-    pub async fn write_lcd(&self, x: u16, y: u16, rect: &'static ImageRect) -> Result<(), StreamDeckError> {
+    /// Writes image data to Stream Deck device's lcd strip/screen, needs to accept Arc for image data since it runs a blocking thread under the hood
+    pub async fn write_lcd(&self, x: u16, y: u16, rect: Arc<ImageRect>) -> Result<(), StreamDeckError> {
         let device = self.device.clone().lock_owned().await;
         Ok(tokio::task::spawn_blocking(move || {
-            device.write_lcd(x, y, rect)
+            device.write_lcd(x, y, rect.as_ref())
         }).await??)
     }
 
