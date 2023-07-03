@@ -2,7 +2,7 @@
 name = "elgato-streamdeck"
 description = "HidApi driver for Elgato Stream Decks"
 authors = ["TheJebForge"]
-version = "0.3.5"
+version = "0.4.0"
 edition = "2021"
 readme = "README.md"
 homepage = "https://github.com/streamduck-org"
@@ -19,7 +19,7 @@ async-recursion = { version = "1.0.2", optional = true }
 serial_test = "2.0.0"
 
 [features]
-async = ["tokio", "tokio/sync", "tokio/rt", "tokio/time", "async-recursion"]
+async = ["tokio", "tokio/sync", "tokio/rt-multi-thread", "tokio/time", "async-recursion"]
 
 [package.metadata.docs.rs]
 all-features = true

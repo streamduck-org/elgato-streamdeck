@@ -152,7 +152,7 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "elgato-streamdeck"
-version = "0.3.5"
+version = "0.4.0"
 dependencies = [
  "async-recursion",
  "hidapi",
@@ -730,6 +730,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03201d01c3c27a29c8a5cee5b55a93ddae1ccf6f08f65365c2c918f8c1b76f64"
 dependencies = [
  "autocfg",
+ "num_cpus",
  "pin-project-lite",
  "windows-sys",
 ]

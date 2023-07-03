@@ -19,6 +19,9 @@ sudo udevadm control --reload-rules
 ```
 Unplugging and plugging back in the device should also help
 
+You should also create group called "plugdev" and add yourself to it, so you get access to the devices. 
+You also need to restart the user session to let user group changes to kick in
+
 ## Example
 ```rust
 // Create instance of HidApi

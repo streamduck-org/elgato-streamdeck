@@ -1,16 +1,38 @@
+//! Code from this module is using [block_in_place](tokio::task::block_in_place),
+//! and so they cannot be used in [current_thread](tokio::runtime::Builder::new_current_thread) runtimes
+
 use std::iter::zip;
 use std::sync::Arc;
 use std::time::Duration;
 
-use hidapi::HidApi;
+use hidapi::{HidApi, HidResult};
 use image::DynamicImage;
 use tokio::sync::Mutex;
+use tokio::task::block_in_place;
 use tokio::time::sleep;
 
-use crate::{Kind, StreamDeck, StreamDeckError, StreamDeckInput};
+use crate::{Kind, list_devices, StreamDeck, StreamDeckError, StreamDeckInput};
 use crate::images::{convert_image_async, ImageRect};
 
-/// Stream Deck interface suitable to be used in async
+/// Actually refreshes the device list, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
+pub fn refresh_device_list_async(hidapi: &mut HidApi) -> HidResult<()> {
+    block_in_place(move || {
+        hidapi.refresh_devices()
+    })
+}
+
+/// Returns a list of devices as (Kind, Serial Number) that could be found using HidApi,
+/// can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
+///
+/// **WARNING:** To refresh the list, use [refresh_device_list]
+pub fn list_devices_async(hidapi: &HidApi) -> Vec<(Kind, String)> {
+    block_in_place(move || {
+        list_devices(&hidapi)
+    })
+}
+
+/// Stream Deck interface suitable to be used in async, uses [block_in_place](block_in_place)
+/// so this wrapper cannot be used in [current_thread](tokio::runtime::Builder::new_current_thread) runtimes
 #[derive(Clone)]
 pub struct AsyncStreamDeck {
     kind: Kind,
@@ -19,9 +41,9 @@ pub struct AsyncStreamDeck {
 
 /// Static functions of the struct
 impl AsyncStreamDeck {
-    /// Attempts to connect to the device
+    /// Attempts to connect to the device, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
     pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<AsyncStreamDeck, StreamDeckError> {
-        let device = StreamDeck::connect(hidapi, kind, serial)?;
+        let device = block_in_place(move || StreamDeck::connect(hidapi, kind, serial))?;
 
         Ok(AsyncStreamDeck {
             kind,
@@ -39,44 +61,49 @@ impl AsyncStreamDeck {
 
     /// Returns manufacturer string of the device
     pub async fn manufacturer(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.manufacturer()
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.manufacturer()
+        })?)
     }
 
     /// Returns product string of the device
     pub async fn product(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.product()
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.product()
+        })?)
     }
 
     /// Returns serial number of the device
     pub async fn serial_number(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.serial_number()
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.serial_number()
+        })?)
     }
 
     /// Returns firmware version of the StreamDeck
     pub async fn firmware_version(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.firmware_version()
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.firmware_version()
+        })?)
     }
 
     /// Reads button states, awaits until there's data.
     /// Poll rate determines how often button state gets checked
     pub async fn read_input(&self, poll_rate: f32) -> Result<StreamDeckInput, StreamDeckError> {
         loop {
-            let device = self.device.clone().lock_owned().await;
-            let data = tokio::task::spawn_blocking(move || {
-                device.read_input(None)
-            }).await??;
+            let device = self.device.clone();
+            let lock = device.lock().await;
+            let data = block_in_place(move || {
+                lock.read_input(None)
+            })?;
 
             if !data.is_empty() {
                 return Ok(data);
@@ -99,53 +126,59 @@ impl AsyncStreamDeck {
 
     /// Resets the device
     pub async fn reset(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.reset()
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.reset()
+        })?)
     }
 
     /// Sets brightness of the device, value range is 0 - 100
     pub async fn set_brightness(&self, percent: u8) -> Result<(), StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.set_brightness(percent)
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.set_brightness(percent)
+        })?)
     }
 
     /// Writes image data to Stream Deck device, needs to accept Arc for image data since it runs a blocking thread under the hood
-    pub async fn write_image(&self, key: u8, image_data: Arc<Vec<u8>>) -> Result<(), StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.write_image(key, image_data.as_slice())
-        }).await??)
+    pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.write_image(key, image_data)
+        })?)
     }
 
     /// Writes image data to Stream Deck device's lcd strip/screen, needs to accept Arc for image data since it runs a blocking thread under the hood
     pub async fn write_lcd(&self, x: u16, y: u16, rect: Arc<ImageRect>) -> Result<(), StreamDeckError> {
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.write_lcd(x, y, rect.as_ref())
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.write_lcd(x, y, rect.as_ref())
+        })?)
     }
 
     /// Writes image data to Stream Deck device
     pub async fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         let image = self.kind.blank_image();
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.write_image(key, &image)
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.write_image(key, &image)
+        })?)
     }
 
     /// Sets specified button's image
     pub async fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
-        let image = convert_image_async(self.kind, image).await?;
+        let image = convert_image_async(self.kind, image)?;
 
-        let device = self.device.clone().lock_owned().await;
-        Ok(tokio::task::spawn_blocking(move || {
-            device.write_image(key, &image)
-        }).await??)
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || {
+            lock.write_image(key, &image)
+        })?)
     }
 }
 

@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use std::sync::Arc;
 use image::{ColorType, DynamicImage, GenericImageView, ImageError};
 use image::codecs::bmp::BmpEncoder;
@@ -52,11 +53,11 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
     }
 }
 
-/// Converts image into image data depending on provided kind of device, suitable for use in async context
+/// Converts image into image data depending on provided kind of device, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
-pub async fn convert_image_async(kind: Kind, image: DynamicImage) -> Result<Arc<Vec<u8>>, crate::StreamDeckError> {
-    Ok(Arc::new(tokio::task::spawn_blocking(move || convert_image(kind, image)).await??))
+pub fn convert_image_async(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, crate::StreamDeckError> {
+    Ok(tokio::task::block_in_place(move || convert_image(kind, image))?)
 }
 
 /// Rect to be used when trying to send image to lcd screen
@@ -89,10 +90,10 @@ impl ImageRect {
         })
     }
 
-    /// Converts image to image rect, using async
+    /// Converts image to image rect, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
     #[cfg(feature = "async")]
     #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
-    pub async fn from_image_async(image: DynamicImage) -> Result<Arc<ImageRect>, StreamDeckError> {
-        Ok(Arc::new(tokio::task::spawn_blocking(move || ImageRect::from_image(image)).await??))
+    pub fn from_image_async(image: DynamicImage) -> Result<ImageRect, StreamDeckError> {
+        Ok(tokio::task::block_in_place(move || ImageRect::from_image(image))?)
     }
 }

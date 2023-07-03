@@ -34,9 +34,6 @@ pub mod asynchronous;
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 pub use asynchronous::AsyncStreamDeck;
 
-#[cfg(test)]
-mod tests;
-
 /// Creates an instance of the HidApi
 ///
 /// Can be used if you don't want to link hidapi crate into your project
