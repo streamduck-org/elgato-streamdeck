@@ -6,6 +6,19 @@ Heavily based on [python-elgato-streamdeck](https://github.com/abcminiuser/pytho
 This library was made as a better designed alternative to streamdeck library for Rust.
 I just took code from both of the libraries and made it more so pleasant to use.
 
+## udev rules for Linux
+If you're using systemd on your system, you might have to install udev rules to allow connecting to Stream Decks from userspace.
+
+You can do that by using following command to copy included 40-streamdeck.rules file into udev/rules.d/
+```shell
+cp 40-streamdeck.rules /etc/udev/rules.d/
+```
+And then reloading udev rules
+```shell
+sudo udevadm control --reload-rules
+```
+Unplugging and plugging back in the device should also help
+
 ## Example
 ```rust
 // Create instance of HidApi
