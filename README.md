@@ -9,7 +9,7 @@ I just took code from both of the libraries and made it more so pleasant to use.
 ## udev rules for Linux
 If you're using systemd on your system, you might have to install udev rules to allow connecting to Stream Decks from userspace.
 
-You can do that by using following command to copy included 40-streamdeck.rules file into udev/rules.d/
+You can do that by using following command to copy included into repo `40-streamdeck.rules` file into `udev/rules.d/`
 ```shell
 cp 40-streamdeck.rules /etc/udev/rules.d/
 ```
