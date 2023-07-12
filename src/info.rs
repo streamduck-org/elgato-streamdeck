@@ -21,7 +21,7 @@ pub const PID_STREAMDECK_PEDAL: u16 = 0x0086;
 pub const PID_STREAMDECK_PLUS: u16 = 0x0084;
 
 /// Enum describing kinds of Stream Decks out there
-#[derive(Copy, Clone, Debug, Hash)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Kind {
     /// First revision of original Stream Deck
     Original,

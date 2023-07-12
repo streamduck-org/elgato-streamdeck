@@ -2,7 +2,7 @@
 name = "elgato-streamdeck"
 description = "HidApi driver for Elgato Stream Decks"
 authors = ["TheJebForge"]
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 readme = "README.md"
 homepage = "https://github.com/streamduck-org"
@@ -10,7 +10,7 @@ repository = "https://github.com/streamduck-org/elgato-streamdeck"
 license = "MPL-2.0"
 
 [dependencies]
-hidapi = "2.2.2"
+hidapi = "2.4"
 image = "0.24.6"
 tokio = { version = "1", optional = true }
 async-recursion = { version = "1.0.2", optional = true }

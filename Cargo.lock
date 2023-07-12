@@ -152,7 +152,7 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "elgato-streamdeck"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "async-recursion",
  "hidapi",
@@ -326,9 +326,9 @@ dependencies = [
 
 [[package]]
 name = "hidapi"
-version = "2.2.2"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7461dc5aae7f2f360289bae7d169690e51c182d4b5a56adeb8c7f312965f0411"
+checksum = "794c84123f70c5ac93c45f0fed6edd39db80aab71a62097982e4ab13b43e8bb7"
 dependencies = [
  "cc",
  "libc",
