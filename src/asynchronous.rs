@@ -11,7 +11,7 @@ use tokio::sync::Mutex;
 use tokio::task::block_in_place;
 use tokio::time::sleep;
 
-use crate::{Kind, list_devices, StreamDeck, StreamDeckError, StreamDeckInput};
+use crate::{DeviceState, DeviceStateUpdate, Kind, list_devices, StreamDeck, StreamDeckError, StreamDeckInput};
 use crate::images::{convert_image_async, ImageRect};
 
 /// Actually refreshes the device list, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
@@ -114,8 +114,8 @@ impl AsyncStreamDeck {
     }
 
     /// Returns button state reader for this device
-    pub fn get_reader(&self) -> Arc<DeviceStateReader> {
-        Arc::new(DeviceStateReader {
+    pub fn get_reader(&self) -> Arc<AsyncDeviceStateReader> {
+        Arc::new(AsyncDeviceStateReader {
             device: self.clone(),
             states: Mutex::new(DeviceState {
                 buttons: vec![false; self.kind.key_count() as usize],
@@ -183,46 +183,12 @@ impl AsyncStreamDeck {
 }
 
 /// Button reader that keeps state of the Stream Deck and returns events instead of full states
-pub struct DeviceStateReader {
+pub struct AsyncDeviceStateReader {
     device: AsyncStreamDeck,
     states: Mutex<DeviceState>
 }
 
-#[derive(Default)]
-struct DeviceState {
-    buttons: Vec<bool>,
-    encoders: Vec<bool>
-}
-
-/// Tells what changed in button states
-#[derive(Copy, Clone, Debug, Hash)]
-pub enum DeviceStateUpdate {
-    /// Button got pressed down
-    ButtonDown(u8),
-
-    /// Button got released
-    ButtonUp(u8),
-
-    /// Encoder got pressed down
-    EncoderDown(u8),
-
-    /// Encoder was released from being pressed down
-    EncoderUp(u8),
-
-    /// Encoder was twisted
-    EncoderTwist(u8, i8),
-
-    /// Touch screen received short press
-    TouchScreenPress(u16, u16),
-
-    /// Touch screen received long press
-    TouchScreenLongPress(u16, u16),
-
-    /// Touch screen received a swipe
-    TouchScreenSwipe((u16, u16), (u16, u16)),
-}
-
-impl DeviceStateReader {
+impl AsyncDeviceStateReader {
     /// Reads states and returns updates
     #[async_recursion::async_recursion]
     pub async fn read(&self, poll_rate: f32) -> Result<Vec<DeviceStateUpdate>, StreamDeckError> {

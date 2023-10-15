@@ -2,7 +2,7 @@
 name = "elgato-streamdeck"
 description = "HidApi driver for Elgato Stream Decks"
 authors = ["TheJebForge"]
-version = "0.4.1"
+version = "0.5.0"
 edition = "2021"
 readme = "README.md"
 homepage = "https://github.com/streamduck-org"

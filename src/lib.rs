@@ -9,7 +9,9 @@
 
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::iter::zip;
 use std::str::Utf8Error;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
@@ -462,6 +464,17 @@ impl StreamDeck {
         let image_data = convert_image(self.kind, image)?;
         Ok(self.write_image(key, &image_data)?)
     }
+
+    /// Returns button state reader for this device
+    pub fn get_reader(self: &Arc<Self>) -> Arc<DeviceStateReader> {
+        Arc::new(DeviceStateReader {
+            device: self.clone(),
+            states: Mutex::new(DeviceState {
+                buttons: vec![false; self.kind.key_count() as usize],
+                encoders: vec![false; self.kind.encoder_count() as usize],
+            })
+        })
+    }
 }
 
 /// Errors that can occur while working with Stream Decks
@@ -480,6 +493,9 @@ pub enum StreamDeckError {
     #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
     /// Tokio join error
     JoinError(tokio::task::JoinError),
+
+    /// Reader mutex was poisoned
+    PoisonError,
 
     /// There's literally nowhere to write the image
     NoScreen,
@@ -527,5 +543,118 @@ impl From<ImageError> for StreamDeckError {
 impl From<tokio::task::JoinError> for StreamDeckError {
     fn from(e: tokio::task::JoinError) -> Self {
         Self::JoinError(e)
+    }
+}
+
+impl<T> From<PoisonError<T>> for StreamDeckError {
+    fn from(_value: PoisonError<T>) -> Self {
+        Self::PoisonError
+    }
+}
+
+/// Tells what changed in button states
+#[derive(Copy, Clone, Debug, Hash)]
+pub enum DeviceStateUpdate {
+    /// Button got pressed down
+    ButtonDown(u8),
+
+    /// Button got released
+    ButtonUp(u8),
+
+    /// Encoder got pressed down
+    EncoderDown(u8),
+
+    /// Encoder was released from being pressed down
+    EncoderUp(u8),
+
+    /// Encoder was twisted
+    EncoderTwist(u8, i8),
+
+    /// Touch screen received short press
+    TouchScreenPress(u16, u16),
+
+    /// Touch screen received long press
+    TouchScreenLongPress(u16, u16),
+
+    /// Touch screen received a swipe
+    TouchScreenSwipe((u16, u16), (u16, u16)),
+}
+
+#[derive(Default)]
+struct DeviceState {
+    pub buttons: Vec<bool>,
+    pub encoders: Vec<bool>
+}
+
+/// Button reader that keeps state of the Stream Deck and returns events instead of full states
+pub struct DeviceStateReader {
+    device: Arc<StreamDeck>,
+    states: Mutex<DeviceState>
+}
+
+impl DeviceStateReader {
+    /// Reads states and returns updates
+    pub fn read(&self, timeout: Option<Duration>) -> Result<Vec<DeviceStateUpdate>, StreamDeckError> {
+        let input = self.device.read_input(timeout)?;
+        let mut my_states = self.states.lock()?;
+
+        let mut updates = vec![];
+
+        match input {
+            StreamDeckInput::ButtonStateChange(buttons) => {
+                for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
+                    if *their != *mine {
+                        if *their {
+                            updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                        } else {
+                            updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                        }
+                    }
+                }
+
+                my_states.buttons = buttons;
+            }
+
+            StreamDeckInput::EncoderStateChange(encoders) => {
+                for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
+                    if *their != *mine {
+                        if *their {
+                            updates.push(DeviceStateUpdate::EncoderDown(index as u8));
+                        } else {
+                            updates.push(DeviceStateUpdate::EncoderUp(index as u8));
+                        }
+                    }
+                }
+
+                my_states.encoders = encoders;
+            }
+
+            StreamDeckInput::EncoderTwist(twist) => {
+                for (index, change) in twist.iter().enumerate() {
+                    if *change != 0 {
+                        updates.push(DeviceStateUpdate::EncoderTwist(index as u8, *change));
+                    }
+                }
+            }
+
+            StreamDeckInput::TouchScreenPress(x, y) => {
+                updates.push(DeviceStateUpdate::TouchScreenPress(x, y));
+            }
+
+            StreamDeckInput::TouchScreenLongPress(x, y) => {
+                updates.push(DeviceStateUpdate::TouchScreenLongPress(x, y));
+            }
+
+            StreamDeckInput::TouchScreenSwipe(s, e) => {
+                updates.push(DeviceStateUpdate::TouchScreenSwipe(s, e));
+            }
+
+            _ => {}
+        }
+
+
+        drop(my_states);
+
+        Ok(updates)
     }
 }
