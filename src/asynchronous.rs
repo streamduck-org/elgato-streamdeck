@@ -152,11 +152,11 @@ impl AsyncStreamDeck {
     }
 
     /// Writes image data to Stream Deck device's lcd strip/screen, needs to accept Arc for image data since it runs a blocking thread under the hood
-    pub async fn write_lcd(&self, x: u16, y: u16, rect: Arc<ImageRect>) -> Result<(), StreamDeckError> {
+    pub async fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
         Ok(block_in_place(move || {
-            lock.write_lcd(x, y, rect.as_ref())
+            lock.write_lcd(x, y, rect)
         })?)
     }
 
