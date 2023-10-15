@@ -7,6 +7,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
+use std::cell::RefCell;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
@@ -14,7 +15,7 @@ use std::time::Duration;
 
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use image::{DynamicImage, ImageError};
-use crate::images::{convert_image, ImageRect};
+use crate::images::{convert_image, generate_blank_image, ImageRect};
 
 use crate::info::{ELGATO_VENDOR_ID, Kind};
 use crate::util::{extract_str, flip_key_index, get_feature_report, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data};
@@ -114,6 +115,8 @@ pub struct StreamDeck {
     kind: Kind,
     /// Connected HIDDevice
     device: HidDevice,
+
+    _blank_image: RefCell<Option<Vec<u8>>>,
 }
 
 /// Static functions of the struct
@@ -124,7 +127,8 @@ impl StreamDeck {
 
         Ok(StreamDeck {
             kind,
-            device
+            device,
+            _blank_image: Default::default(),
         })
     }
 }
@@ -454,7 +458,14 @@ impl StreamDeck {
 
     /// Sets button's image to blank
     pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
-        Ok(self.write_image(key, &self.kind.blank_image())?)
+         let mut image = self._blank_image.borrow_mut();
+         if let Some(image) = &*image {
+             return self.write_image(key, &image);
+         }
+         let blank_image = generate_blank_image(self.kind)?;
+         self.write_image(key, &blank_image)?;
+         *image = Some(blank_image);
+         Ok(())
     }
 
     /// Sets specified button's image

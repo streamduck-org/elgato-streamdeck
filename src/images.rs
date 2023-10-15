@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 use std::sync::Arc;
-use image::{ColorType, DynamicImage, GenericImageView, ImageError};
+use image::{ColorType, DynamicImage, GenericImageView, ImageBuffer, ImageError};
 use image::codecs::bmp::BmpEncoder;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
@@ -51,6 +51,15 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
             Ok(buf)
         }
     }
+}
+
+/// Generates a blank button image
+pub fn generate_blank_image(kind: Kind) -> Result<Vec<u8>, ImageError> {
+    let (width, height) = kind.key_image_format().size;
+    let image = ImageBuffer::from_fn(width as u32, height as u32, |_x, _y| {
+        image::Luma([0u8])
+    });
+    Ok(convert_image(kind, image.into())?)
 }
 
 /// Converts image into image data depending on provided kind of device, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime

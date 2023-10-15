@@ -162,11 +162,10 @@ impl AsyncStreamDeck {
 
     /// Writes image data to Stream Deck device
     pub async fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
-        let image = self.kind.blank_image();
         let device = self.device.clone();
         let lock = device.lock().await;
         Ok(block_in_place(move || {
-            lock.write_image(key, &image)
+            lock.clear_button_image(key)
         })?)
     }
 
