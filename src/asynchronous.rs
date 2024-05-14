@@ -16,9 +16,7 @@ use crate::images::{convert_image_async, ImageRect};
 
 /// Actually refreshes the device list, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
 pub fn refresh_device_list_async(hidapi: &mut HidApi) -> HidResult<()> {
-    block_in_place(move || {
-        hidapi.refresh_devices()
-    })
+    block_in_place(move || hidapi.refresh_devices())
 }
 
 /// Returns a list of devices as (Kind, Serial Number) that could be found using HidApi,
@@ -26,9 +24,7 @@ pub fn refresh_device_list_async(hidapi: &mut HidApi) -> HidResult<()> {
 ///
 /// **WARNING:** To refresh the list, use [refresh_device_list]
 pub fn list_devices_async(hidapi: &HidApi) -> Vec<(Kind, String)> {
-    block_in_place(move || {
-        list_devices(&hidapi)
-    })
+    block_in_place(move || list_devices(&hidapi))
 }
 
 /// Stream Deck interface suitable to be used in async, uses [block_in_place](block_in_place)
@@ -36,7 +32,7 @@ pub fn list_devices_async(hidapi: &HidApi) -> Vec<(Kind, String)> {
 #[derive(Clone)]
 pub struct AsyncStreamDeck {
     kind: Kind,
-    device: Arc<Mutex<StreamDeck>>
+    device: Arc<Mutex<StreamDeck>>,
 }
 
 /// Static functions of the struct
@@ -47,7 +43,7 @@ impl AsyncStreamDeck {
 
         Ok(AsyncStreamDeck {
             kind,
-            device: Arc::new(Mutex::new(device))
+            device: Arc::new(Mutex::new(device)),
         })
     }
 }
@@ -63,36 +59,28 @@ impl AsyncStreamDeck {
     pub async fn manufacturer(&self) -> Result<String, StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.manufacturer()
-        })?)
+        Ok(block_in_place(move || lock.manufacturer())?)
     }
 
     /// Returns product string of the device
     pub async fn product(&self) -> Result<String, StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.product()
-        })?)
+        Ok(block_in_place(move || lock.product())?)
     }
 
     /// Returns serial number of the device
     pub async fn serial_number(&self) -> Result<String, StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.serial_number()
-        })?)
+        Ok(block_in_place(move || lock.serial_number())?)
     }
 
     /// Returns firmware version of the StreamDeck
     pub async fn firmware_version(&self) -> Result<String, StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.firmware_version()
-        })?)
+        Ok(block_in_place(move || lock.firmware_version())?)
     }
 
     /// Reads button states, awaits until there's data.
@@ -101,9 +89,7 @@ impl AsyncStreamDeck {
         loop {
             let device = self.device.clone();
             let lock = device.lock().await;
-            let data = block_in_place(move || {
-                lock.read_input(None)
-            })?;
+            let data = block_in_place(move || lock.read_input(None))?;
 
             if !data.is_empty() {
                 return Ok(data);
@@ -120,7 +106,7 @@ impl AsyncStreamDeck {
             states: Mutex::new(DeviceState {
                 buttons: vec![false; self.kind.key_count() as usize],
                 encoders: vec![false; self.kind.encoder_count() as usize],
-            })
+            }),
         })
     }
 
@@ -128,36 +114,28 @@ impl AsyncStreamDeck {
     pub async fn reset(&self) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.reset()
-        })?)
+        Ok(block_in_place(move || lock.reset())?)
     }
 
     /// Sets brightness of the device, value range is 0 - 100
     pub async fn set_brightness(&self, percent: u8) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.set_brightness(percent)
-        })?)
+        Ok(block_in_place(move || lock.set_brightness(percent))?)
     }
 
     /// Writes image data to Stream Deck device, needs to accept Arc for image data since it runs a blocking thread under the hood
     pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.write_image(key, image_data)
-        })?)
+        Ok(block_in_place(move || lock.write_image(key, image_data))?)
     }
 
     /// Writes image data to Stream Deck device's lcd strip/screen, needs to accept Arc for image data since it runs a blocking thread under the hood
     pub async fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.write_lcd(x, y, rect)
-        })?)
+        Ok(block_in_place(move || lock.write_lcd(x, y, rect))?)
     }
 
     /// Writes image data to Stream Deck device
@@ -165,9 +143,7 @@ impl AsyncStreamDeck {
         let image = self.kind.blank_image();
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.write_image(key, &image)
-        })?)
+        Ok(block_in_place(move || lock.write_image(key, &image))?)
     }
 
     /// Sets specified button's image
@@ -176,16 +152,14 @@ impl AsyncStreamDeck {
 
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || {
-            lock.write_image(key, &image)
-        })?)
+        Ok(block_in_place(move || lock.write_image(key, &image))?)
     }
 }
 
 /// Button reader that keeps state of the Stream Deck and returns events instead of full states
 pub struct AsyncDeviceStateReader {
     device: AsyncStreamDeck,
-    states: Mutex<DeviceState>
+    states: Mutex<DeviceState>,
 }
 
 impl AsyncDeviceStateReader {
@@ -248,7 +222,6 @@ impl AsyncDeviceStateReader {
 
             _ => {}
         }
-
 
         drop(my_states);
 

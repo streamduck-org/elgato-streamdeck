@@ -29,7 +29,7 @@ pub fn read_data(device: &HidDevice, length: usize, timeout: Option<Duration>) -
 
     match timeout {
         Some(timeout) => device.read_timeout(buf.as_mut_slice(), timeout.as_millis() as i32),
-        None => device.read(buf.as_mut_slice())
+        None => device.read(buf.as_mut_slice()),
     }?;
 
     Ok(buf)
@@ -54,7 +54,7 @@ pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
 /// Reads button states, empty vector if no data
 pub fn read_button_states(kind: &Kind, states: &Vec<u8>) -> Vec<bool> {
     if states[0] == 0 {
-        return vec![]
+        return vec![];
     }
 
     match kind {
@@ -70,17 +70,9 @@ pub fn read_button_states(kind: &Kind, states: &Vec<u8>) -> Vec<bool> {
             bools
         }
 
-        Kind::Mini | Kind::MiniMk2 => {
-            states[1..].iter()
-                .map(|s| *s != 0)
-                .collect()
-        }
+        Kind::Mini | Kind::MiniMk2 => states[1..].iter().map(|s| *s != 0).collect(),
 
-        _ => {
-            states[4..].iter()
-                .map(|s| *s != 0)
-                .collect()
-        }
+        _ => states[4..].iter().map(|s| *s != 0).collect(),
     }
 }
 
@@ -97,29 +89,20 @@ pub fn read_lcd_input(data: &Vec<u8>) -> Result<StreamDeckInput, StreamDeckError
             let end_x = u16::from_le_bytes([data[10], data[11]]);
             let end_y = u16::from_le_bytes([data[12], data[13]]);
 
-            Ok(StreamDeckInput::TouchScreenSwipe(
-                (start_x, start_y),
-                (end_x, end_y)
-            ))
+            Ok(StreamDeckInput::TouchScreenSwipe((start_x, start_y), (end_x, end_y)))
         }
 
-        _ => Err(StreamDeckError::BadData)
+        _ => Err(StreamDeckError::BadData),
     }
 }
 
 /// Reads encoder input
 pub fn read_encoder_input(kind: &Kind, data: &Vec<u8>) -> Result<StreamDeckInput, StreamDeckError> {
     match &data[4] {
-        0x0 => Ok(StreamDeckInput::EncoderStateChange(
-            data[5..5 + kind.encoder_count() as usize].iter()
-                .map(|s| *s != 0)
-                .collect()
-        )),
+        0x0 => Ok(StreamDeckInput::EncoderStateChange(data[5..5 + kind.encoder_count() as usize].iter().map(|s| *s != 0).collect())),
 
         0x1 => Ok(StreamDeckInput::EncoderTwist(
-            data[5..5 + kind.encoder_count() as usize].iter()
-                .map(|s| i8::from_le_bytes([*s]))
-                .collect()
+            data[5..5 + kind.encoder_count() as usize].iter().map(|s| i8::from_le_bytes([*s])).collect(),
         )),
 
         _ => Err(StreamDeckError::BadData),
