@@ -49,6 +49,11 @@ let image = open("no-place-like-localhost.jpg").unwrap();
 
 // Write it to the device
 device.set_button_image(7, image).unwrap();
+
+// Flush
+if device.updated {
+    device.flush().unwrap();
+}
 ```
 
 ## Status
@@ -70,3 +75,5 @@ But as it stands, this library should support following devices:
 - Stream Deck Mk2
 - Stream Deck Pedal
 - Stream Deck Plus (thanks to [node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck))
+
+- Ajazz AKP153

@@ -143,7 +143,10 @@ impl AsyncStreamDeck {
         let image = self.kind.blank_image();
         let device = self.device.clone();
         let lock = device.lock().await;
-        Ok(block_in_place(move || lock.write_image(key, &image))?)
+        match self.kind {
+            Kind::Akp153 => Ok(block_in_place(move || lock.clear_button_image(key))?),
+            _ => Ok(block_in_place(move || lock.write_image(key, &image))?),
+        }
     }
 
     /// Sets specified button's image
@@ -174,11 +177,21 @@ impl AsyncDeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if *their != *mine {
-                        if *their {
-                            updates.push(DeviceStateUpdate::ButtonDown(index as u8));
-                        } else {
-                            updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                    match self.device.kind {
+                        Kind::Akp153 => {
+                            if *their {
+                                updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                            }
+                        }
+                        _ => {
+                            if *their != *mine {
+                                if *their {
+                                    updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                } else {
+                                    updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                }
+                            }
                         }
                     }
                 }

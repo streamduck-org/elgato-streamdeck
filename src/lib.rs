@@ -7,6 +7,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
+use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::zip;
@@ -15,11 +16,14 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
-use image::{DynamicImage, ImageError};
+use image::{DynamicImage, ImageBuffer, ImageError, Rgb};
+use image::imageops::resize;
 use crate::images::{convert_image, ImageRect};
 
-use crate::info::{ELGATO_VENDOR_ID, Kind};
-use crate::util::{extract_str, flip_key_index, get_feature_report, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data};
+use crate::info::{ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID, Kind};
+use crate::util::{
+    extract_str, ajazz_to_elgato_input, elgato_to_ajazz, flip_key_index, get_feature_report, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data,
+};
 
 /// Various information about Stream Deck devices
 pub mod info;
@@ -55,7 +59,7 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
     hidapi
         .device_list()
         .filter_map(|d| {
-            if d.vendor_id() != ELGATO_VENDOR_ID {
+            if d.vendor_id() != AJAZZ_VENDOR_ID && d.vendor_id() != ELGATO_VENDOR_ID {
                 return None;
             }
 
@@ -69,6 +73,8 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
                 None
             }
         })
+        .collect::<HashSet<_>>()
+        .into_iter()
         .collect()
 }
 
@@ -114,15 +120,17 @@ pub struct StreamDeck {
     kind: Kind,
     /// Connected HIDDevice
     device: HidDevice,
+    /// Image buffers updated
+    pub updated: bool,
 }
 
 /// Static functions of the struct
 impl StreamDeck {
     /// Attempts to connect to the device
     pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<StreamDeck, StreamDeckError> {
-        let device = hidapi.open_serial(ELGATO_VENDOR_ID, kind.product_id(), serial)?;
+        let device = hidapi.open_serial(kind.vendor_id(), kind.product_id(), serial)?;
 
-        Ok(StreamDeck { kind, device })
+        Ok(StreamDeck { kind, device, updated: false })
     }
 }
 
@@ -146,6 +154,20 @@ impl StreamDeck {
     /// Returns serial number of the device
     pub fn serial_number(&self) -> Result<String, StreamDeckError> {
         match self.kind {
+            Kind::Akp153 => {
+                let serial = self.device.get_serial_number_string()?;
+                match serial {
+                    Some(serial) => {
+                        if serial.is_empty() {
+                            Ok("Unknown".to_string())
+                        } else {
+                            Ok(serial)
+                        }
+                    }
+                    None => Ok("Unknown".to_string()),
+                }
+            }
+
             Kind::Original | Kind::Mini => {
                 let bytes = get_feature_report(&self.device, 0x03, 17)?;
                 Ok(extract_str(&bytes[5..])?)
@@ -169,6 +191,11 @@ impl StreamDeck {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
                 let bytes = get_feature_report(&self.device, 0x04, 17)?;
                 Ok(extract_str(&bytes[5..])?)
+            }
+
+            Kind::Akp153 => {
+                let bytes = get_feature_report(&self.device, 0x01, 20)?;
+                Ok(extract_str(&bytes[0..])?)
             }
 
             _ => {
@@ -199,6 +226,32 @@ impl StreamDeck {
                 }
             }
 
+            Kind::Akp153 => {
+                let data = match self.kind {
+                    _ => read_data(&self.device, 512, timeout),
+                }?;
+
+                if data[0] != 0 {
+                    return Ok(StreamDeckInput::NoData);
+                }
+
+                // ack ok
+                if data[0] == 65 && data[1] == 67 && data[2] == 75 && data[3] == 0 && data[4] == 0 && data[5] == 79 && data[6] == 75 && data[7] == 0 {
+                    return Ok(StreamDeckInput::NoData);
+                }
+
+                let mut states = vec![0x01];
+                states.extend(vec![0u8; (self.kind.key_count() + 1) as usize]);
+
+                if data[9] != 0 {
+                    let key = ajazz_to_elgato_input(&self.kind, data[9] - 1);
+
+                    states[(key + 1) as usize] = 0x1u8;
+                }
+
+                Ok(StreamDeckInput::ButtonStateChange(read_button_states(&self.kind, &states)))
+            }
+
             _ => {
                 let data = match self.kind {
                     Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(&self.device, 1 + self.kind.key_count() as usize, timeout),
@@ -215,7 +268,7 @@ impl StreamDeck {
     }
 
     /// Resets the device
-    pub fn reset(&self) -> Result<(), StreamDeckError> {
+    pub fn reset(&mut self) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
                 let mut buf = vec![0x0B, 0x63];
@@ -224,6 +277,11 @@ impl StreamDeck {
 
                 Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
+
+            Kind::Akp153 => Ok({
+                self.set_brightness(100)?;
+                self.clear_button_image(0xff)?;
+            }),
 
             _ => {
                 let mut buf = vec![0x03, 0x02];
@@ -248,6 +306,16 @@ impl StreamDeck {
                 Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
 
+            Kind::Akp153 => {
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, percent];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+
+                Ok(())
+            }
+
             _ => {
                 let mut buf = vec![0x03, 0x08, percent];
 
@@ -259,24 +327,58 @@ impl StreamDeck {
     }
 
     /// Writes image data to Stream Deck device
-    pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+    pub fn write_image(&mut self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         if key >= self.kind.key_count() {
             return Err(StreamDeckError::InvalidKeyIndex);
         }
 
-        let key = if let Kind::Original = self.kind { flip_key_index(&self.kind, key) } else { key };
+        let key = if let Kind::Original = self.kind {
+            flip_key_index(&self.kind, key)
+        } else if let Kind::Akp153 = self.kind {
+            elgato_to_ajazz(&self.kind, key)
+        } else {
+            key
+        };
 
         if !self.kind.is_visual() {
             return Err(StreamDeckError::NoScreen);
         }
 
+        match self.kind {
+            Kind::Akp153 => {
+                let mut buf = vec![
+                    0x43,
+                    0x52,
+                    0x54,
+                    0x00,
+                    0x00,
+                    0x42,
+                    0x41,
+                    0x54,
+                    0x00,
+                    0x00,
+                    (image_data.len() >> 8) as u8,
+                    image_data.len() as u8,
+                    key + 1,
+                ];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+            }
+
+            _ => {}
+        }
+
         let image_report_length = match self.kind {
             Kind::Original => 8191,
+            Kind::Akp153 => 512,
             _ => 1024,
         };
 
         let image_report_header_length = match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
+            Kind::Akp153 => 0,
             _ => 8,
         };
 
@@ -332,6 +434,8 @@ impl StreamDeck {
                     0,
                 ],
 
+                Kind::Akp153 => vec![],
+
                 _ => vec![
                     0x02,
                     0x07,
@@ -355,6 +459,10 @@ impl StreamDeck {
             page_number += 1;
         }
 
+        self.updated = true;
+        // // flush
+        // self.flush()?;
+
         Ok(())
     }
 
@@ -362,6 +470,7 @@ impl StreamDeck {
     pub fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
         if !match self.kind {
             Kind::Plus => true,
+            Kind::Akp153 => false,
             _ => false,
         } {
             return Err(StreamDeckError::UnsupportedOperation);
@@ -415,14 +524,216 @@ impl StreamDeck {
     }
 
     /// Sets button's image to blank
-    pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
-        Ok(self.write_image(key, &self.kind.blank_image())?)
+    pub fn clear_button_image(&mut self, key: u8) -> Result<(), StreamDeckError> {
+        match self.kind {
+            Kind::Akp153 => {
+                let key = if let Kind::Akp153 = self.kind { elgato_to_ajazz(&self.kind, key) } else { key };
+
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+
+                Ok(())
+            }
+
+            _ => Ok(self.write_image(key, &self.kind.blank_image())?),
+        }
     }
 
     /// Sets specified button's image
-    pub fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+    pub fn set_button_image(&mut self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
         let image_data = convert_image(self.kind, image)?;
         Ok(self.write_image(key, &image_data)?)
+    }
+
+    /// Set logo image
+    pub fn set_logo_image(&mut self, image: DynamicImage) -> Result<(), StreamDeckError> {
+        if !match self.kind {
+            Kind::Akp153 => true,
+            _ => false,
+        } {
+            return Err(StreamDeckError::UnsupportedOperation);
+        }
+
+        if self.kind.lcd_strip_size().is_none() {
+            return Err(StreamDeckError::UnsupportedOperation);
+        }
+        // 854 * 480 * 3
+        let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x4f, 0x47, 0x00, 0x12, 0xc3, 0xc0, 0x01];
+
+        buf.extend(vec![0u8; 512 - buf.len()]);
+
+        write_data(&self.device, buf.as_slice())?;
+
+        let mut image_buffer: DynamicImage = DynamicImage::new_rgb8(854, 480);
+
+        let ratio = 854.0 / 480.0;
+
+        let mode = "cover";
+
+        match mode {
+            "contain" => {
+                let (image_w, image_h) = (image.width(), image.height());
+                let image_ratio = image_w as f32 / image_h as f32;
+
+                let (ws, hs) = if image_ratio > ratio {
+                    (854, (854.0 / image_ratio) as u32)
+                } else {
+                    ((480.0 * image_ratio) as u32, 480)
+                };
+
+                let resized_image = image.resize(ws, hs, image::imageops::FilterType::Nearest);
+                image::imageops::overlay(
+                    &mut image_buffer,
+                    &resized_image,
+                    ((854 - resized_image.width()) / 2) as i64,
+                    ((480 - resized_image.height()) / 2) as i64,
+                );
+            }
+            "cover" => {
+                let resized_image = image.resize_to_fill(854, 480, image::imageops::FilterType::Nearest);
+                image::imageops::overlay(
+                    &mut image_buffer,
+                    &resized_image,
+                    ((854 - resized_image.width()) / 2) as i64,
+                    ((480 - resized_image.height()) / 2) as i64,
+                );
+            }
+            _ => {
+                let (image_w, image_h) = (image.width(), image.height());
+                let image_ratio = image_w as f32 / image_h as f32;
+
+                let (ws, hs) = if image_ratio > ratio {
+                    ((480.0 * image_ratio) as u32, 480)
+                } else {
+                    (854, (854.0 / image_ratio) as u32)
+                };
+
+                let resized_image = image.resize(ws, hs, image::imageops::FilterType::Nearest);
+                image::imageops::overlay(
+                    &mut image_buffer,
+                    &resized_image,
+                    ((854 - resized_image.width()) / 2) as i64,
+                    ((480 - resized_image.height()) / 2) as i64,
+                );
+            }
+        }
+
+        let mut image_data = image_buffer.rotate90().fliph().flipv().into_rgb8().to_vec();
+        for x in (0..image_data.len()).step_by(3) {
+            (image_data[x], image_data[x + 2]) = (image_data[x + 2], image_data[x])
+        }
+
+        let image_report_length = match self.kind {
+            Kind::Original => 8191,
+            Kind::Akp153 => 512,
+            _ => 1024,
+        };
+
+        let image_report_header_length = match self.kind {
+            Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
+            Kind::Akp153 => 0,
+            _ => 8,
+        };
+
+        let image_report_payload_length = match self.kind {
+            Kind::Original => image_data.len() / 2,
+            _ => image_report_length - image_report_header_length,
+        };
+
+        let mut page_number = 0;
+        let mut bytes_remaining = image_data.len();
+
+        while bytes_remaining > 0 {
+            let this_length = bytes_remaining.min(image_report_payload_length);
+            let bytes_sent = page_number * image_report_payload_length;
+
+            // Selecting header based on device
+            let mut buf: Vec<u8> = vec![];
+
+            buf.extend(&image_data[bytes_sent..bytes_sent + this_length]);
+
+            // Adding padding
+            buf.extend(vec![0u8; image_report_length - buf.len()]);
+
+            write_data(&self.device, &buf)?;
+
+            bytes_remaining -= this_length;
+            page_number += 1;
+        }
+
+        Ok(())
+    }
+
+    /// Flushes the button's image to the device
+    pub fn flush(&mut self) -> Result<(), StreamDeckError> {
+        match self.kind {
+            Kind::Akp153 => {
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+
+                self.updated = false;
+
+                Ok(())
+            }
+
+            _ => {
+                self.updated = false;
+
+                Ok(())
+            }
+        }
+    }
+
+    /// Sleeps the device
+    pub fn sleep(&self) -> Result<(), StreamDeckError> {
+        match self.kind {
+            Kind::Akp153 => {
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4e];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+
+                Ok(())
+            }
+
+            _ => Ok(()),
+        }
+    }
+
+    /// Shutdown the device
+    pub fn shutdown(&self) -> Result<(), StreamDeckError> {
+        match self.kind {
+            Kind::Akp153 => {
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, 0xff];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x44, 0x43];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+
+                Ok(())
+            }
+
+            _ => Ok(()),
+        }
     }
 
     /// Returns button state reader for this device
@@ -563,11 +874,21 @@ impl DeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if *their != *mine {
-                        if *their {
-                            updates.push(DeviceStateUpdate::ButtonDown(index as u8));
-                        } else {
-                            updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                    match self.device.kind {
+                        Kind::Akp153 => {
+                            if *their {
+                                updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                            }
+                        }
+                        _ => {
+                            if *their != *mine {
+                                if *their {
+                                    updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                } else {
+                                    updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                }
+                            }
                         }
                     }
                 }
