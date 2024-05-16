@@ -22,7 +22,7 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
         ImageRotation::Rot0 => image,
         ImageRotation::Rot90 => image.rotate90(),
         ImageRotation::Rot180 => image.rotate180(),
-        ImageRotation::Rot270 => image.rotate270()
+        ImageRotation::Rot270 => image.rotate270(),
     };
 
     // Applying mirroring
@@ -30,7 +30,7 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
         ImageMirroring::None => image,
         ImageMirroring::X => image.fliph(),
         ImageMirroring::Y => image.flipv(),
-        ImageMirroring::Both => image.fliph().flipv()
+        ImageMirroring::Both => image.fliph().flipv(),
     };
 
     let image_data = image.into_rgb8().to_vec();
@@ -69,7 +69,7 @@ pub struct ImageRect {
     pub h: u16,
 
     /// Data of the image row by row as RGB
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 impl ImageRect {
