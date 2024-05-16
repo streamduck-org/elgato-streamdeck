@@ -11,7 +11,7 @@ license = "MPL-2.0"
 
 [dependencies]
 hidapi = { version = "2.4", default-features = false }
-image = { version = "0.24.6", default-features = false, features = [
+image = { version = "0.25.1", default-features = false, features = [
   "bmp",
   "jpeg",
 ] }
