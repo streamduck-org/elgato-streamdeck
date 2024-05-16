@@ -546,6 +546,21 @@ impl StreamDeck {
         }
     }
 
+    /// Sets blank images to every button
+    pub fn clear_all_button_images(&mut self) -> Result<(), StreamDeckError> {
+        match self.kind {
+            Kind::Akp153 => {
+                self.clear_button_image(0xff)
+            }
+            _ => { 
+                for i in 0..self.kind.key_count() {
+                    self.clear_button_image(i)?
+                }
+                Ok(())
+            },
+        }
+    }
+
     /// Sets specified button's image
     pub fn set_button_image(&mut self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
         let image_data = convert_image(self.kind, image)?;

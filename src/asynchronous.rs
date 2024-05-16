@@ -113,7 +113,7 @@ impl AsyncStreamDeck {
     /// Resets the device
     pub async fn reset(&self) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.reset())?)
     }
 
@@ -127,7 +127,7 @@ impl AsyncStreamDeck {
     /// Writes image data to Stream Deck device, needs to accept Arc for image data since it runs a blocking thread under the hood
     pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, image_data))?)
     }
 
@@ -138,15 +138,22 @@ impl AsyncStreamDeck {
         Ok(block_in_place(move || lock.write_lcd(x, y, rect))?)
     }
 
-    /// Writes image data to Stream Deck device
+    /// Sets button's image to blank
     pub async fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         let image = self.kind.blank_image();
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         match self.kind {
             Kind::Akp153 => Ok(block_in_place(move || lock.clear_button_image(key))?),
             _ => Ok(block_in_place(move || lock.write_image(key, &image))?),
         }
+    }
+
+    /// Sets blank images to every button
+    pub async fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let mut lock = device.lock().await;
+        Ok(block_in_place(move || lock.clear_all_button_images())?)
     }
 
     /// Sets specified button's image
@@ -154,7 +161,7 @@ impl AsyncStreamDeck {
         let image = convert_image_async(self.kind, image)?;
 
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, &image))?)
     }
 }
