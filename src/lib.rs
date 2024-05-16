@@ -16,8 +16,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
-use image::{DynamicImage, ImageBuffer, ImageError, Rgb};
-use image::imageops::resize;
+use image::{DynamicImage, ImageError};
 use crate::images::{convert_image, ImageRect};
 
 use crate::info::{ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID, Kind};
@@ -121,7 +120,7 @@ pub struct StreamDeck {
     /// Connected HIDDevice
     device: HidDevice,
     /// Image buffers updated
-    pub updated: bool,
+    updated: bool,
 }
 
 /// Static functions of the struct
@@ -203,6 +202,11 @@ impl StreamDeck {
                 Ok(extract_str(&bytes[6..])?)
             }
         }
+    }
+
+    /// Returns whether the image buffer has been modified.
+    pub fn is_updated(&self) -> bool {
+        self.updated
     }
 
     /// Reads all possible input from Stream Deck device
@@ -527,7 +531,7 @@ impl StreamDeck {
     pub fn clear_button_image(&mut self, key: u8) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Akp153 => {
-                let key = if let Kind::Akp153 = self.kind { elgato_to_ajazz(&self.kind, key) } else { key };
+                let key = elgato_to_ajazz(&self.kind, key);
 
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
 

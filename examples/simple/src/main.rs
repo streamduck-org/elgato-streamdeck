@@ -35,7 +35,7 @@ async fn main() {
                 }
 
                 // Flush
-                if device.updated {
+                if device.is_updated() {
                     device.flush().unwrap();
                 }
 
