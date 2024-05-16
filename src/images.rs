@@ -41,13 +41,13 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
         ImageMode::BMP => {
             let mut buf = Vec::new();
             let mut encoder = BmpEncoder::new(&mut buf);
-            encoder.encode(&image_data, ws as u32, hs as u32, ColorType::Rgb8)?;
+            encoder.encode(&image_data, ws as u32, hs as u32, ColorType::Rgb8.into())?;
             Ok(buf)
         }
         ImageMode::JPEG => {
             let mut buf = Vec::new();
             let mut encoder = JpegEncoder::new_with_quality(&mut buf, 90);
-            encoder.encode(&image_data, ws as u32, hs as u32, ColorType::Rgb8)?;
+            encoder.encode(&image_data, ws as u32, hs as u32, ColorType::Rgb8.into())?;
             Ok(buf)
         }
     }
@@ -81,7 +81,7 @@ impl ImageRect {
 
         let mut buf = Vec::new();
         let mut encoder = JpegEncoder::new_with_quality(&mut buf, 90);
-        encoder.encode(&image_data, image_w, image_h, ColorType::Rgb8)?;
+        encoder.encode(&image_data, image_w, image_h, ColorType::Rgb8.into())?;
 
         Ok(ImageRect {
             w: image_w as u16,
