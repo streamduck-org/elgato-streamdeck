@@ -97,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "elgato-streamdeck"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "async-recursion",
  "hidapi",
