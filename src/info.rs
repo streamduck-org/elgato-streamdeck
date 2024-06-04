@@ -26,6 +26,9 @@ pub const AJAZZ_VENDOR_ID: u16 = 0x5548;
 /// Product ID of Ajazz Stream Deck AK153
 pub const PID_AJAZZ_AKP153: u16 = 0x6674;
 
+/// Product ID of Streamdeck Neo
+pub const PID_STREAMDECK_NEO: u16 = 0x009a;
+
 /// Enum describing kinds of Stream Decks out there
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Kind {
@@ -62,6 +65,7 @@ impl Kind {
             PID_STREAMDECK_XL_V2 => Some(Kind::XlV2),
             PID_STREAMDECK_MK2 => Some(Kind::Mk2),
             PID_STREAMDECK_MINI_MK2 => Some(Kind::MiniMk2),
+            PID_STREAMDECK_NEO => Some(Kind::Neo),
             PID_STREAMDECK_PEDAL => Some(Kind::Pedal),
             PID_STREAMDECK_PLUS => Some(Kind::Plus),
             PID_AJAZZ_AKP153 => Some(Kind::Akp153),
@@ -79,6 +83,7 @@ impl Kind {
             Kind::XlV2 => PID_STREAMDECK_XL_V2,
             Kind::Mk2 => PID_STREAMDECK_MK2,
             Kind::MiniMk2 => PID_STREAMDECK_MINI_MK2,
+            Kind::Neo => PID_STREAMDECK_NEO,
             Kind::Pedal => PID_STREAMDECK_PEDAL,
             Kind::Plus => PID_STREAMDECK_PLUS,
             Kind::Akp153 => PID_AJAZZ_AKP153,
@@ -109,6 +114,7 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 32,
             Kind::Pedal => 3,
             Kind::Plus => 8,
+            Kind::Neo => 10, // or 8? 2 touch capacitive not counted?
             Kind::Akp153 => 15 + 3,
         }
     }
@@ -120,7 +126,7 @@ impl Kind {
             Kind::Mini | Kind::MiniMk2 => 2,
             Kind::Xl | Kind::XlV2 => 4,
             Kind::Pedal => 1,
-            Kind::Plus => 2,
+            Kind::Plus | Kind::Neo => 2,
             Kind::Akp153 => 3,
         }
     }
@@ -132,7 +138,7 @@ impl Kind {
             Kind::Mini | Kind::MiniMk2 => 3,
             Kind::Xl | Kind::XlV2 => 8,
             Kind::Pedal => 3,
-            Kind::Plus => 4,
+            Kind::Plus | Kind::Neo => 4,
             Kind::Akp153 => 6,
         }
     }
@@ -149,6 +155,8 @@ impl Kind {
     pub fn lcd_strip_size(&self) -> Option<(usize, usize)> {
         match self {
             Kind::Plus => Some((800, 100)),
+            // TODO: To define proper size
+            Kind::Neo => Some((800, 100)), // Unknown size strip to
             Kind::Akp153 => Some((854, 480)), // logo
             _ => None,
         }
@@ -206,6 +214,8 @@ impl Kind {
             },
 
             Kind::Pedal => ImageFormat::default(),
+
+            // TODO: Define Neo
 
             Kind::Akp153 => ImageFormat {
                 mode: ImageMode::JPEG,
