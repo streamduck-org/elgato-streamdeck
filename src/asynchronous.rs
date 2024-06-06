@@ -164,6 +164,13 @@ impl AsyncStreamDeck {
         let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, &image))?)
     }
+
+    /// Sets specified touch point's led strip color
+    pub async fn set_touch_point_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || lock.set_touch_point_color(point, red, green, blue))?)
+    }
 }
 
 /// Button reader that keeps state of the Stream Deck and returns events instead of full states
@@ -193,10 +200,18 @@ impl AsyncDeviceStateReader {
                         }
                         _ => {
                             if *their != *mine {
-                                if *their {
-                                    updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                if index < self.device.kind.key_count() as usize {
+                                    if *their {
+                                        updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                    } else {
+                                        updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                    }
                                 } else {
-                                    updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                    if *their {
+                                        updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - self.device.kind.key_count()));
+                                    } else {
+                                        updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - self.device.kind.key_count()));
+                                    }
                                 }
                             }
                         }

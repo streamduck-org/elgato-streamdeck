@@ -34,6 +34,11 @@ async fn main() {
                     device.set_button_image(i, image.clone()).unwrap();
                 }
 
+                println!("Touch point count: {}", kind.point_count());
+                for i in 0..kind.point_count() as u8 {
+                    device.set_touch_point_color(i, 255, 255, 255).unwrap();
+                }
+
                 // Flush
                 if device.is_updated() {
                     device.flush().unwrap();
@@ -67,6 +72,13 @@ async fn main() {
                                 }
                                 DeviceStateUpdate::EncoderUp(dial) => {
                                     println!("Dial {} up", dial);
+                                }
+
+                                DeviceStateUpdate::TouchPointDown(point) => {
+                                    println!("Touch point {} down", point);
+                                }
+                                DeviceStateUpdate::TouchPointUp(point) => {
+                                    println!("Touch point {} up", point);
                                 }
 
                                 DeviceStateUpdate::TouchScreenPress(x, y) => {

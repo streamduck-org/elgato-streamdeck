@@ -15,6 +15,8 @@ pub const PID_STREAMDECK_XL_V2: u16 = 0x008f;
 pub const PID_STREAMDECK_MK2: u16 = 0x0080;
 /// Product ID of Stream Deck Mini Mk2
 pub const PID_STREAMDECK_MINI_MK2: u16 = 0x0090;
+/// Product ID of Stream Deck Neo
+pub const PID_STREAMDECK_NEO: u16 = 0x009a;
 /// Product ID of Stream Deck Pedal
 pub const PID_STREAMDECK_PEDAL: u16 = 0x0086;
 /// Product ID of Stream Deck Plus
@@ -43,6 +45,8 @@ pub enum Kind {
     Mk2,
     /// Stream Deck Mini Mk2
     MiniMk2,
+    /// Stream Deck Neo
+    Neo,
     /// Stream Deck Pedal
     Pedal,
     /// Stream Deck Plus
@@ -62,6 +66,7 @@ impl Kind {
             PID_STREAMDECK_XL_V2 => Some(Kind::XlV2),
             PID_STREAMDECK_MK2 => Some(Kind::Mk2),
             PID_STREAMDECK_MINI_MK2 => Some(Kind::MiniMk2),
+            PID_STREAMDECK_NEO => Some(Kind::Neo),
             PID_STREAMDECK_PEDAL => Some(Kind::Pedal),
             PID_STREAMDECK_PLUS => Some(Kind::Plus),
             PID_AJAZZ_AKP153 => Some(Kind::Akp153),
@@ -79,6 +84,7 @@ impl Kind {
             Kind::XlV2 => PID_STREAMDECK_XL_V2,
             Kind::Mk2 => PID_STREAMDECK_MK2,
             Kind::MiniMk2 => PID_STREAMDECK_MINI_MK2,
+            Kind::Neo => PID_STREAMDECK_NEO,
             Kind::Pedal => PID_STREAMDECK_PEDAL,
             Kind::Plus => PID_STREAMDECK_PLUS,
             Kind::Akp153 => PID_AJAZZ_AKP153,
@@ -95,6 +101,7 @@ impl Kind {
             Kind::XlV2 => ELGATO_VENDOR_ID,
             Kind::Mk2 => ELGATO_VENDOR_ID,
             Kind::MiniMk2 => ELGATO_VENDOR_ID,
+            Kind::Neo => ELGATO_VENDOR_ID,
             Kind::Pedal => ELGATO_VENDOR_ID,
             Kind::Plus => ELGATO_VENDOR_ID,
             Kind::Akp153 => AJAZZ_VENDOR_ID,
@@ -108,7 +115,7 @@ impl Kind {
             Kind::Mini | Kind::MiniMk2 => 6,
             Kind::Xl | Kind::XlV2 => 32,
             Kind::Pedal => 3,
-            Kind::Plus => 8,
+            Kind::Neo | Kind::Plus => 8,
             Kind::Akp153 => 15 + 3,
         }
     }
@@ -120,7 +127,7 @@ impl Kind {
             Kind::Mini | Kind::MiniMk2 => 2,
             Kind::Xl | Kind::XlV2 => 4,
             Kind::Pedal => 1,
-            Kind::Plus => 2,
+            Kind::Neo | Kind::Plus => 2,
             Kind::Akp153 => 3,
         }
     }
@@ -132,7 +139,7 @@ impl Kind {
             Kind::Mini | Kind::MiniMk2 => 3,
             Kind::Xl | Kind::XlV2 => 8,
             Kind::Pedal => 3,
-            Kind::Plus => 4,
+            Kind::Neo | Kind::Plus => 4,
             Kind::Akp153 => 6,
         }
     }
@@ -145,10 +152,19 @@ impl Kind {
         }
     }
 
+    /// Amount of touch points the Stream Deck kind has
+    pub fn point_count(&self) -> u8 {
+        match self {
+            Kind::Neo => 2,
+            _ => 0,
+        }
+    }
+
     /// Size of the LCD strip on the device
     pub fn lcd_strip_size(&self) -> Option<(usize, usize)> {
         match self {
             Kind::Plus => Some((800, 100)),
+            Kind::Neo => Some((248, 58)),
             Kind::Akp153 => Some((854, 480)), // logo
             _ => None,
         }
@@ -191,7 +207,7 @@ impl Kind {
                 mirror: ImageMirroring::Y,
             },
 
-            Kind::Xl | Kind::XlV2 => ImageFormat {
+            Kind::Neo | Kind::Xl | Kind::XlV2 => ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (96, 96),
                 rotation: ImageRotation::Rot0,
@@ -260,7 +276,7 @@ impl Kind {
                 0x02, 0x8a, 0x28, 0xa0, 0x0f, 0xff, 0xd9,
             ],
 
-            Kind::Xl | Kind::XlV2 => vec![
+            Kind::Neo | Kind::Xl | Kind::XlV2 => vec![
                 0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x08, 0x06, 0x06, 0x07, 0x06,
                 0x05, 0x08, 0x07, 0x07, 0x07, 0x09, 0x09, 0x08, 0x0a, 0x0c, 0x14, 0x0d, 0x0c, 0x0b, 0x0b, 0x0c, 0x19, 0x12, 0x13, 0x0f, 0x14, 0x1d, 0x1a, 0x1f, 0x1e, 0x1d, 0x1a, 0x1c, 0x1c, 0x20,
                 0x24, 0x2e, 0x27, 0x20, 0x22, 0x2c, 0x23, 0x1c, 0x1c, 0x28, 0x37, 0x29, 0x2c, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1f, 0x27, 0x39, 0x3d, 0x38, 0x32, 0x3c, 0x2e, 0x33, 0x34, 0x32, 0xff,

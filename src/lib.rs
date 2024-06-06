@@ -259,7 +259,7 @@ impl StreamDeck {
             _ => {
                 let data = match self.kind {
                     Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(&self.device, 1 + self.kind.key_count() as usize, timeout),
-                    _ => read_data(&self.device, 4 + self.kind.key_count() as usize, timeout),
+                    _ => read_data(&self.device, 4 + self.kind.key_count() as usize + self.kind.point_count() as usize, timeout),
                 }?;
 
                 if data[0] == 0 {
@@ -474,6 +474,7 @@ impl StreamDeck {
     pub fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
         if !match self.kind {
             Kind::Plus => true,
+            Kind::Neo => true,
             Kind::Akp153 => false,
             _ => false,
         } {
@@ -709,6 +710,17 @@ impl StreamDeck {
         }
     }
 
+    /// Sets specified touch point's led strip color
+    pub fn set_touch_point_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+        let mut buf = vec![0x03, 0x06];
+
+        let touch_point_index: u8 = point + self.kind.key_count();
+        buf.extend(vec![touch_point_index]);
+        buf.extend(vec![red, green, blue]);
+
+        Ok(send_feature_report(&self.device, buf.as_slice())?)
+    }
+
     /// Sleeps the device
     pub fn sleep(&self) -> Result<(), StreamDeckError> {
         match self.kind {
@@ -760,7 +772,7 @@ impl StreamDeck {
         Arc::new(DeviceStateReader {
             device: self.clone(),
             states: Mutex::new(DeviceState {
-                buttons: vec![false; self.kind.key_count() as usize],
+                buttons: vec![false; self.kind.key_count() as usize + self.kind.point_count() as usize],
                 encoders: vec![false; self.kind.encoder_count() as usize],
             }),
         })
@@ -860,6 +872,12 @@ pub enum DeviceStateUpdate {
     /// Encoder was twisted
     EncoderTwist(u8, i8),
 
+    /// Touch Point got pressed down
+    TouchPointDown(u8),
+
+    /// Touch Point got released
+    TouchPointUp(u8),
+
     /// Touch screen received short press
     TouchScreenPress(u16, u16),
 
@@ -872,6 +890,7 @@ pub enum DeviceStateUpdate {
 
 #[derive(Default)]
 struct DeviceState {
+    /// Buttons include Touch Points state
     pub buttons: Vec<bool>,
     pub encoders: Vec<bool>,
 }
@@ -902,10 +921,18 @@ impl DeviceStateReader {
                         }
                         _ => {
                             if *their != *mine {
-                                if *their {
-                                    updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                if index < self.device.kind.key_count() as usize {
+                                    if *their {
+                                        updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                    } else {
+                                        updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                    }
                                 } else {
-                                    updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                    if *their {
+                                        updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - self.device.kind.key_count()));
+                                    } else {
+                                        updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - self.device.kind.key_count()));
+                                    }
                                 }
                             }
                         }
