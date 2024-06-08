@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use elgato_streamdeck::{list_devices, new_hidapi, DeviceStateUpdate, StreamDeck};
+use elgato_streamdeck::{images::ImageRect, list_devices, new_hidapi, DeviceStateUpdate, StreamDeck};
 use image::open;
 
 #[tokio::main]
@@ -37,6 +37,14 @@ async fn main() {
                 println!("Touch point count: {}", kind.point_count());
                 for i in 0..kind.point_count() as u8 {
                     device.set_touch_point_color(i, 255, 255, 255).unwrap();
+                }
+
+                match device.kind().lcd_strip_size() {
+                    Some((x, y)) => {
+                        let strip_image = ImageRect::from_image(image.clone().resize_to_fill(x as u32, y as u32, image::imageops::FilterType::Nearest)).unwrap();
+                        device.write_lcd(x as u16, y as u16, &strip_image);
+                    }
+                    None => (),
                 }
 
                 // Flush
