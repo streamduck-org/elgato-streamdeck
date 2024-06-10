@@ -34,15 +34,15 @@ async fn main() {
                     device.set_button_image(i, image.clone()).unwrap();
                 }
 
-                println!("Touch point count: {}", kind.point_count());
-                for i in 0..kind.point_count() as u8 {
-                    device.set_touch_point_color(i, 255, 255, 255).unwrap();
+                println!("Touch point count: {}", kind.touchpoint_count());
+                for i in 0..kind.touchpoint_count() as u8 {
+                    device.set_touchpoint_color(i, 255, 255, 255).unwrap();
                 }
 
                 match device.kind().lcd_strip_size() {
                     Some((x, y)) => {
                         let strip_image = ImageRect::from_image(image.clone().resize_to_fill(x as u32, y as u32, image::imageops::FilterType::Nearest)).unwrap();
-                        device.write_lcd(x as u16, y as u16, &strip_image);
+                        let _ = device.write_lcd(0, 0, &strip_image);
                     }
                     None => (),
                 }

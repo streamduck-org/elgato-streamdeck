@@ -153,7 +153,7 @@ impl Kind {
     }
 
     /// Amount of touch points the Stream Deck kind has
-    pub fn point_count(&self) -> u8 {
+    pub fn touchpoint_count(&self) -> u8 {
         match self {
             Kind::Neo => 2,
             _ => 0,

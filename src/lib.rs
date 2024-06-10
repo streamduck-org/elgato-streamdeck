@@ -259,7 +259,7 @@ impl StreamDeck {
             _ => {
                 let data = match self.kind {
                     Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(&self.device, 1 + self.kind.key_count() as usize, timeout),
-                    _ => read_data(&self.device, 4 + self.kind.key_count() as usize + self.kind.point_count() as usize, timeout),
+                    _ => read_data(&self.device, 4 + self.kind.key_count() as usize + self.kind.touchpoint_count() as usize, timeout),
                 }?;
 
                 if data[0] == 0 {
@@ -711,11 +711,15 @@ impl StreamDeck {
     }
 
     /// Sets specified touch point's led strip color
-    pub fn set_touch_point_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+    pub fn set_touchpoint_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+        if point >= self.kind.touchpoint_count() {
+            return Err(StreamDeckError::InvalidTouchPointIndex);
+        }
+
         let mut buf = vec![0x03, 0x06];
 
-        let touch_point_index: u8 = point + self.kind.key_count();
-        buf.extend(vec![touch_point_index]);
+        let touchpoint_index: u8 = point + self.kind.key_count();
+        buf.extend(vec![touchpoint_index]);
         buf.extend(vec![red, green, blue]);
 
         Ok(send_feature_report(&self.device, buf.as_slice())?)
@@ -772,7 +776,7 @@ impl StreamDeck {
         Arc::new(DeviceStateReader {
             device: self.clone(),
             states: Mutex::new(DeviceState {
-                buttons: vec![false; self.kind.key_count() as usize + self.kind.point_count() as usize],
+                buttons: vec![false; self.kind.key_count() as usize + self.kind.touchpoint_count() as usize],
                 encoders: vec![false; self.kind.encoder_count() as usize],
             }),
         })
@@ -804,6 +808,9 @@ pub enum StreamDeckError {
 
     /// Key index is invalid
     InvalidKeyIndex,
+
+    /// Key index is invalid
+    InvalidTouchPointIndex,
 
     /// Unrecognized Product ID
     UnrecognizedPID,
