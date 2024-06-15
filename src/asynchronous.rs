@@ -124,21 +124,22 @@ impl AsyncStreamDeck {
         Ok(block_in_place(move || lock.set_brightness(percent))?)
     }
 
-    /// Writes image data to Stream Deck device, needs to accept Arc for image data since it runs a blocking thread under the hood
+    /// Writes image data to Stream Deck device
     pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, image_data))?)
     }
 
-    /// Writes image data to Stream Deck device's lcd strip/screen, needs to accept Arc for image data since it runs a blocking thread under the hood
+    /// Writes image data to Stream Deck device's lcd strip/screen as region. 
+    /// Only Stream Deck Plus supports writing LCD regions, for Stream Deck Neo use write_lcd_fill
     pub async fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
         Ok(block_in_place(move || lock.write_lcd(x, y, rect))?)
     }
 
-    /// Writes image data to Stream Deck device's lcd strip/screen, needs to accept Arc for image data since it runs a blocking thread under the hood
+    /// Writes image data to Stream Deck device's lcd strip/screen as full fill
     pub async fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
