@@ -231,6 +231,25 @@ impl Kind {
             },
         }
     }
+    
+    /// Image format used by LCD screen, used for filling LCD
+    pub fn lcd_image_format(&self) -> Option<ImageFormat> {
+        match self {
+            Kind::Neo => Some(ImageFormat {
+                mode: ImageMode::JPEG,
+                size: (248, 58),
+                rotation: ImageRotation::Rot0,
+                mirror: ImageMirroring::None,
+            }),
+            Kind::Plus => Some(ImageFormat {
+                mode: ImageMode::JPEG,
+                size: (800, 100),
+                rotation: ImageRotation::Rot0,
+                mirror: ImageMirroring::None,
+            }),
+            _ => None
+        }
+    }
 
     /// Returns blank image data appropriate for the Stream Deck kind
     pub fn blank_image(&self) -> Vec<u8> {

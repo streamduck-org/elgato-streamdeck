@@ -1,8 +1,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use elgato_streamdeck::{images::ImageRect, list_devices, new_hidapi, DeviceStateUpdate, StreamDeck};
 use image::open;
+
+use elgato_streamdeck::{DeviceStateUpdate, list_devices, new_hidapi, StreamDeck};
+use elgato_streamdeck::images::{convert_image_with_format, ImageRect};
 
 #[tokio::main]
 async fn main() {
@@ -25,9 +27,6 @@ async fn main() {
 
                 // device.set_logo_image(image.clone()).unwrap();
 
-                device.set_brightness(50).unwrap();
-                device.clear_all_button_images().unwrap();
-
                 println!("Key count: {}", kind.key_count());
                 // Write it to the device
                 for i in 0..kind.key_count() as u8 {
@@ -39,13 +38,20 @@ async fn main() {
                     device.set_touchpoint_color(i, 255, 255, 255).unwrap();
                 }
 
-                match device.kind().lcd_strip_size() {
-                    Some((x, y)) => {
-                        let strip_image = ImageRect::from_image(image.clone().resize_to_fill(x as u32, y as u32, image::imageops::FilterType::Nearest)).unwrap();
-                        let _ = device.write_lcd(0, 0, &strip_image);
-                    }
-                    None => (),
+                if let Some(format) = device.kind().lcd_image_format() {
+                    let scaled_image = image.clone().resize_to_fill(format.size.0 as u32, format.size.1 as u32, image::imageops::FilterType::Nearest);
+                    let converted_image = convert_image_with_format(format, scaled_image).unwrap();
+                    let _ = device.write_lcd_fill(&converted_image);
                 }
+                
+                let small = match device.kind().lcd_strip_size() {
+                    Some((w, h)) => {
+                        let min = w.min(h) as u32;
+                        let scaled_image = image.clone().resize_to_fill(min, min, image::imageops::Nearest);
+                        Some(ImageRect::from_image(scaled_image).unwrap())
+                    }
+                    None => None,
+                };
 
                 // Flush
                 if device.is_updated() {
@@ -90,7 +96,10 @@ async fn main() {
                                 }
 
                                 DeviceStateUpdate::TouchScreenPress(x, y) => {
-                                    println!("Touch Screen press at {x}, {y}")
+                                    println!("Touch Screen press at {x}, {y}");
+                                    if let Some(small) = &small {
+                                        device.write_lcd(x, y, small).unwrap();
+                                    }
                                 }
                                 
                                 DeviceStateUpdate::TouchScreenLongPress(x, y) => {

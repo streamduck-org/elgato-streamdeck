@@ -6,12 +6,15 @@ use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 
 use crate::{Kind, StreamDeckError};
-use crate::info::{ImageMirroring, ImageMode, ImageRotation};
+use crate::info::{ImageFormat, ImageMirroring, ImageMode, ImageRotation};
 
 /// Converts image into image data depending on provided kind of device
 pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageError> {
-    let image_format = kind.key_image_format();
+    convert_image_with_format(kind.key_image_format(), image)
+}
 
+/// Converts image into image data depending on provided image format
+pub fn convert_image_with_format(image_format: ImageFormat, image: DynamicImage) -> Result<Vec<u8>, ImageError> {
     // Ensuring size of the image
     let (ws, hs) = image_format.size;
 
@@ -56,8 +59,15 @@ pub fn convert_image(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, ImageEr
 /// Converts image into image data depending on provided kind of device, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
-pub fn convert_image_async(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, crate::StreamDeckError> {
+pub fn convert_image_async(kind: Kind, image: DynamicImage) -> Result<Vec<u8>, StreamDeckError> {
     Ok(tokio::task::block_in_place(move || convert_image(kind, image))?)
+}
+
+/// Converts image into image data depending on provided image format, can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub fn convert_image_with_format_async(format: ImageFormat, image: DynamicImage) -> Result<Vec<u8>, StreamDeckError> {
+    Ok(tokio::task::block_in_place(move || convert_image_with_format(format, image))?)
 }
 
 /// Rect to be used when trying to send image to lcd screen
