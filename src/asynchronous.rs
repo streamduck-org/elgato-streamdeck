@@ -104,7 +104,7 @@ impl AsyncStreamDeck {
         Arc::new(AsyncDeviceStateReader {
             device: self.clone(),
             states: Mutex::new(DeviceState {
-                buttons: vec![false; self.kind.key_count() as usize + self.kind.touchpoint_count()],
+                buttons: vec![false; self.kind.key_count() as usize + self.kind.touchpoint_count() as usize],
                 encoders: vec![false; self.kind.encoder_count() as usize],
             }),
         })
@@ -175,7 +175,7 @@ impl AsyncStreamDeck {
     /// Sets specified touch point's led strip color
     pub async fn set_touchpoint_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.set_touchpoint_color(point, red, green, blue))?)
     }
 }
