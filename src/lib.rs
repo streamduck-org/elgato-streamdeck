@@ -494,8 +494,8 @@ impl StreamDeck {
                         if last_package { 1 } else { 0 },
                         (this_length & 0xff) as u8,
                         (this_length >> 8) as u8,
-                        ((page_number + 1) & 0xff) as u8,
-                        ((page_number + 1) >> 8) as u8,
+                        (page_number & 0xff) as u8,
+                        (page_number >> 8) as u8,
                     ]
                 )
             }

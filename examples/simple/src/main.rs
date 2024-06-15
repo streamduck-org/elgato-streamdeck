@@ -116,7 +116,7 @@ async fn main() {
                     drop(reader);
                 }
 
-                device.shutdown().unwrap();
+                device.shutdown().ok();
             }
         }
         Err(e) => eprintln!("Failed to create HidApi instance: {}", e),
