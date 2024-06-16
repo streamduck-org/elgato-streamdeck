@@ -140,6 +140,13 @@ impl AsyncStreamDeck {
     }
 
     /// Writes image data to Stream Deck device's lcd strip/screen as full fill
+    ///
+    /// You can convert your images into proper image_data like this:
+    /// ```
+    /// use elgato_streamdeck::images::{convert_image_with_format_async};
+    /// let image_data = convert_image_with_format_async(device.kind().lcd_image_format(), image).await.unwrap();
+    /// device.write_lcd_fill(&image_data).await;
+    /// ```
     pub async fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;

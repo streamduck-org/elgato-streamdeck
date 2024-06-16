@@ -477,7 +477,14 @@ impl StreamDeck {
         )
     }
 
-    /// Writes image data to Stream Deck device's lcd strip/screen as full fill 
+    /// Writes image data to Stream Deck device's lcd strip/screen as full fill
+    /// 
+    /// You can convert your images into proper image_data like this:
+    /// ```
+    /// use elgato_streamdeck::images::convert_image_with_format;
+    /// let image_data = convert_image_with_format(device.kind().lcd_image_format(), image).unwrap();
+    /// device.write_lcd_fill(&image_data);
+    /// ```
     pub fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Neo => {
