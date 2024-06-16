@@ -238,7 +238,7 @@ impl Kind {
             Kind::Neo => Some(ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (248, 58),
-                rotation: ImageRotation::Rot0,
+                rotation: ImageRotation::Rot180,
                 mirror: ImageMirroring::None,
             }),
             Kind::Plus => Some(ImageFormat {
