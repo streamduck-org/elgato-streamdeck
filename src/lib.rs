@@ -259,7 +259,7 @@ impl StreamDeck {
             _ => {
                 let data = match self.kind {
                     Kind::Original | Kind::Mini | Kind::MiniMk2 => read_data(&self.device, 1 + self.kind.key_count() as usize, timeout),
-                    _ => read_data(&self.device, 4 + self.kind.key_count() as usize, timeout),
+                    _ => read_data(&self.device, 4 + self.kind.key_count() as usize + self.kind.touchpoint_count() as usize, timeout),
                 }?;
 
                 if data[0] == 0 {
@@ -373,95 +373,65 @@ impl StreamDeck {
 
             _ => {}
         }
-
-        let image_report_length = match self.kind {
-            Kind::Original => 8191,
-            Kind::Akp153 => 512,
-            _ => 1024,
-        };
-
-        let image_report_header_length = match self.kind {
-            Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
-            Kind::Akp153 => 0,
-            _ => 8,
-        };
-
-        let image_report_payload_length = match self.kind {
-            Kind::Original => image_data.len() / 2,
-            _ => image_report_length - image_report_header_length,
-        };
-
-        let mut page_number = 0;
-        let mut bytes_remaining = image_data.len();
-
-        while bytes_remaining > 0 {
-            let this_length = bytes_remaining.min(image_report_payload_length);
-            let bytes_sent = page_number * image_report_payload_length;
-
-            // Selecting header based on device
-            let mut buf: Vec<u8> = match self.kind {
-                Kind::Original => vec![
-                    0x02,
-                    0x01,
-                    (page_number + 1) as u8,
-                    0,
-                    if this_length == bytes_remaining { 1 } else { 0 },
-                    key + 1,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                ],
-
-                Kind::Mini | Kind::MiniMk2 => vec![
-                    0x02,
-                    0x01,
-                    (page_number) as u8,
-                    0,
-                    if this_length == bytes_remaining { 1 } else { 0 },
-                    key + 1,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                ],
-
-                Kind::Akp153 => vec![],
-
-                _ => vec![
-                    0x02,
-                    0x07,
-                    key,
-                    if this_length == bytes_remaining { 1 } else { 0 },
-                    (this_length & 0xff) as u8,
-                    (this_length >> 8) as u8,
-                    (page_number & 0xff) as u8,
-                    (page_number >> 8) as u8,
-                ],
-            };
-
-            buf.extend(&image_data[bytes_sent..bytes_sent + this_length]);
-
-            // Adding padding
-            buf.extend(vec![0u8; image_report_length - buf.len()]);
-
-            write_data(&self.device, &buf)?;
-
-            bytes_remaining -= this_length;
-            page_number += 1;
-        }
+        
+        self.write_image_data_reports(
+            image_data,
+            WriteImageParameters::for_key(self.kind, image_data.len()),
+            |page_number, this_length, last_package| {
+                match self.kind {
+                    Kind::Original => vec![
+                        0x02,
+                        0x01,
+                        (page_number + 1) as u8,
+                        0,
+                        if last_package { 1 } else { 0 },
+                        key + 1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+            
+                    Kind::Mini | Kind::MiniMk2 => vec![
+                        0x02,
+                        0x01,
+                        page_number as u8,
+                        0,
+                        if last_package { 1 } else { 0 },
+                        key + 1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+            
+                    Kind::Akp153 => vec![],
+            
+                    _ => vec![
+                        0x02,
+                        0x07,
+                        key,
+                        if last_package { 1 } else { 0 },
+                        (this_length & 0xff) as u8,
+                        (this_length >> 8) as u8,
+                        (page_number & 0xff) as u8,
+                        (page_number >> 8) as u8,
+                    ],
+                }
+            }
+        )?;
 
         self.updated = true;
         // // flush
@@ -470,31 +440,23 @@ impl StreamDeck {
         Ok(())
     }
 
-    /// Writes image data to Stream Deck device's lcd strip/screen
+    /// Writes image data to Stream Deck device's lcd strip/screen as region. 
+    /// Only Stream Deck Plus supports writing LCD regions, for Stream Deck Neo use write_lcd_fill
     pub fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
-        if !match self.kind {
-            Kind::Plus => true,
-            Kind::Akp153 => false,
-            _ => false,
-        } {
-            return Err(StreamDeckError::UnsupportedOperation);
+        match self.kind {
+            Kind::Plus => (),
+            _ => {
+                return Err(StreamDeckError::UnsupportedOperation)
+            }
         }
-
-        let image_report_length = 1024;
-
-        let image_report_header_length = 16;
-
-        let image_report_payload_length = image_report_length - image_report_header_length;
-
-        let mut page_number = 0;
-        let mut bytes_remaining = rect.data.len();
-
-        while bytes_remaining > 0 {
-            let this_length = bytes_remaining.min(image_report_payload_length);
-            let bytes_sent = page_number * image_report_payload_length;
-
-            // Selecting header based on device
-            let mut buf: Vec<u8> = vec![
+        
+        self.write_image_data_reports(
+            rect.data.as_slice(),
+            WriteImageParameters {
+                image_report_length: 1024,
+                image_report_payload_length: 1024 - 16,
+            },
+            |page_number, this_length, last_package| vec![
                 0x02,
                 0x0c,
                 (x & 0xff) as u8,
@@ -505,26 +467,78 @@ impl StreamDeck {
                 (rect.w >> 8) as u8,
                 (rect.h & 0xff) as u8,
                 (rect.h >> 8) as u8,
-                if bytes_remaining <= image_report_payload_length { 1 } else { 0 },
+                if last_package { 1 } else { 0 },
                 (page_number & 0xff) as u8,
                 (page_number >> 8) as u8,
                 (this_length & 0xff) as u8,
                 (this_length >> 8) as u8,
                 0,
-            ];
+            ]
+        )
+    }
 
-            buf.extend(&rect.data[bytes_sent..bytes_sent + this_length]);
+    /// Writes image data to Stream Deck device's lcd strip/screen as full fill
+    /// 
+    /// You can convert your images into proper image_data like this:
+    /// ```
+    /// use elgato_streamdeck::images::convert_image_with_format;
+    /// let image_data = convert_image_with_format(device.kind().lcd_image_format(), image).unwrap();
+    /// device.write_lcd_fill(&image_data);
+    /// ```
+    pub fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        match self.kind {
+            Kind::Neo => {
+                self.write_image_data_reports(
+                    image_data,
+                    WriteImageParameters {
+                        image_report_length: 1024,
+                        image_report_payload_length: 1024 - 8
+                    },
+                    |page_number, this_length, last_package| vec![
+                        0x02,
+                        0x0b,
+                        0,
+                        if last_package { 1 } else { 0 },
+                        (this_length & 0xff) as u8,
+                        (this_length >> 8) as u8,
+                        (page_number & 0xff) as u8,
+                        (page_number >> 8) as u8,
+                    ]
+                )
+            }
+            
+            Kind::Plus => {
+                let (w, h) = self.kind.lcd_strip_size().unwrap();
 
-            // Adding padding
-            buf.extend(vec![0u8; image_report_length - buf.len()]);
-
-            write_data(&self.device, &buf)?;
-
-            bytes_remaining -= this_length;
-            page_number += 1;
+                self.write_image_data_reports(
+                    image_data,
+                    WriteImageParameters {
+                        image_report_length: 1024,
+                        image_report_payload_length: 1024 - 16,
+                    },
+                    |page_number, this_length, last_package| vec![
+                        0x02,
+                        0x0c,
+                        0,
+                        0,
+                        0,
+                        0,
+                        (w & 0xff) as u8,
+                        (w >> 8) as u8,
+                        (h & 0xff) as u8,
+                        (h >> 8) as u8,
+                        if last_package { 1 } else { 0 },
+                        (page_number & 0xff) as u8,
+                        (page_number >> 8) as u8,
+                        (this_length & 0xff) as u8,
+                        (this_length >> 8) as u8,
+                        0,
+                    ]
+                )
+            }
+            
+            _ => Err(StreamDeckError::UnsupportedOperation)
         }
-
-        Ok(())
     }
 
     /// Sets button's image to blank
@@ -569,11 +583,11 @@ impl StreamDeck {
 
     /// Set logo image
     pub fn set_logo_image(&mut self, image: DynamicImage) -> Result<(), StreamDeckError> {
-        if !match self.kind {
-            Kind::Akp153 => true,
-            _ => false,
-        } {
-            return Err(StreamDeckError::UnsupportedOperation);
+        match self.kind {
+            Kind::Akp153 => (),
+            _ => {
+                return Err(StreamDeckError::UnsupportedOperation)
+            }
         }
 
         if self.kind.lcd_strip_size().is_none() {
@@ -709,6 +723,21 @@ impl StreamDeck {
         }
     }
 
+    /// Sets specified touch point's led strip color
+    pub fn set_touchpoint_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+        if point >= self.kind.touchpoint_count() {
+            return Err(StreamDeckError::InvalidTouchPointIndex);
+        }
+
+        let mut buf = vec![0x03, 0x06];
+
+        let touchpoint_index: u8 = point + self.kind.key_count();
+        buf.extend(vec![touchpoint_index]);
+        buf.extend(vec![red, green, blue]);
+
+        Ok(send_feature_report(&self.device, buf.as_slice())?)
+    }
+
     /// Sleeps the device
     pub fn sleep(&self) -> Result<(), StreamDeckError> {
         match self.kind {
@@ -722,7 +751,7 @@ impl StreamDeck {
                 Ok(())
             }
 
-            _ => Ok(()),
+            _ => Err(StreamDeckError::UnsupportedOperation),
         }
     }
 
@@ -751,7 +780,7 @@ impl StreamDeck {
                 Ok(())
             }
 
-            _ => Ok(()),
+            _ => Err(StreamDeckError::UnsupportedOperation),
         }
     }
 
@@ -760,11 +789,79 @@ impl StreamDeck {
         Arc::new(DeviceStateReader {
             device: self.clone(),
             states: Mutex::new(DeviceState {
-                buttons: vec![false; self.kind.key_count() as usize],
+                buttons: vec![false; self.kind.key_count() as usize + self.kind.touchpoint_count() as usize],
                 encoders: vec![false; self.kind.encoder_count() as usize],
             }),
         })
     }
+    
+    fn write_image_data_reports<T>(
+        &self, 
+        image_data: &[u8], 
+        parameters: WriteImageParameters,
+        header_fn: T
+    ) -> Result<(), StreamDeckError>
+    where
+        T: Fn(usize, usize, bool) -> Vec<u8>
+    {
+        let image_report_length = parameters.image_report_length;
+        let image_report_payload_length = parameters.image_report_payload_length;
+
+        let mut page_number = 0;
+        let mut bytes_remaining = image_data.len();
+
+        while bytes_remaining > 0 {
+            let this_length = bytes_remaining.min(image_report_payload_length);
+            let bytes_sent = page_number * image_report_payload_length;
+
+            // Selecting header based on device
+            let mut buf: Vec<u8> = header_fn(page_number, this_length, this_length == bytes_remaining);
+
+            buf.extend(&image_data[bytes_sent..bytes_sent + this_length]);
+
+            // Adding padding
+            buf.extend(vec![0u8; image_report_length - buf.len()]);
+
+            write_data(&self.device, &buf)?;
+
+            bytes_remaining -= this_length;
+            page_number += 1;
+        }
+        
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy)]
+struct WriteImageParameters { 
+    pub image_report_length: usize,
+    pub image_report_payload_length: usize
+}
+
+impl WriteImageParameters {
+    pub fn for_key(kind: Kind, image_data_len: usize) -> Self {
+        let image_report_length = match kind {
+            Kind::Original => 8191,
+            Kind::Akp153 => 512,
+            _ => 1024,
+        };
+
+        let image_report_header_length = match kind {
+            Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
+            Kind::Akp153 => 0,
+            _ => 8,
+        };
+
+        let image_report_payload_length = match kind {
+            Kind::Original => image_data_len / 2,
+            _ => image_report_length - image_report_header_length,
+        };
+        
+        Self {
+            image_report_length,
+            image_report_payload_length
+        }
+    } 
 }
 
 /// Errors that can occur while working with Stream Decks
@@ -792,6 +889,9 @@ pub enum StreamDeckError {
 
     /// Key index is invalid
     InvalidKeyIndex,
+
+    /// Key index is invalid
+    InvalidTouchPointIndex,
 
     /// Unrecognized Product ID
     UnrecognizedPID,
@@ -860,6 +960,12 @@ pub enum DeviceStateUpdate {
     /// Encoder was twisted
     EncoderTwist(u8, i8),
 
+    /// Touch Point got pressed down
+    TouchPointDown(u8),
+
+    /// Touch Point got released
+    TouchPointUp(u8),
+
     /// Touch screen received short press
     TouchScreenPress(u16, u16),
 
@@ -872,6 +978,7 @@ pub enum DeviceStateUpdate {
 
 #[derive(Default)]
 struct DeviceState {
+    /// Buttons include Touch Points state
     pub buttons: Vec<bool>,
     pub encoders: Vec<bool>,
 }
@@ -902,10 +1009,18 @@ impl DeviceStateReader {
                         }
                         _ => {
                             if *their != *mine {
-                                if *their {
-                                    updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                if index < self.device.kind.key_count() as usize {
+                                    if *their {
+                                        updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                                    } else {
+                                        updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                    }
                                 } else {
-                                    updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                    if *their {
+                                        updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - self.device.kind.key_count()));
+                                    } else {
+                                        updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - self.device.kind.key_count()));
+                                    }
                                 }
                             }
                         }
