@@ -6,8 +6,7 @@ use image::open;
 use elgato_streamdeck::{DeviceStateUpdate, list_devices, new_hidapi, StreamDeck};
 use elgato_streamdeck::images::{convert_image_with_format, ImageRect};
 
-#[tokio::main]
-async fn main() {
+fn main() {
     // Create instance of HidApi
     match new_hidapi() {
         Ok(hid) => {
