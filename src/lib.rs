@@ -13,6 +13,7 @@ use std::fmt::{Display, Formatter};
 use std::iter::zip;
 use std::str::Utf8Error;
 use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
@@ -120,7 +121,7 @@ pub struct StreamDeck {
     /// Connected HIDDevice
     device: HidDevice,
     /// Image buffers updated
-    updated: bool,
+    updated: AtomicBool,
 }
 
 /// Static functions of the struct
@@ -129,7 +130,7 @@ impl StreamDeck {
     pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<StreamDeck, StreamDeckError> {
         let device = hidapi.open_serial(kind.vendor_id(), kind.product_id(), serial)?;
 
-        Ok(StreamDeck { kind, device, updated: false })
+        Ok(StreamDeck { kind, device, updated: false.into() })
     }
 }
 
@@ -206,7 +207,7 @@ impl StreamDeck {
 
     /// Returns whether the image buffer has been modified.
     pub fn is_updated(&self) -> bool {
-        self.updated
+        self.updated.load(Ordering::Acquire)
     }
 
     /// Reads all possible input from Stream Deck device
@@ -272,7 +273,7 @@ impl StreamDeck {
     }
 
     /// Resets the device
-    pub fn reset(&mut self) -> Result<(), StreamDeckError> {
+    pub fn reset(&self) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
                 let mut buf = vec![0x0B, 0x63];
@@ -331,7 +332,7 @@ impl StreamDeck {
     }
 
     /// Writes image data to Stream Deck device
-    pub fn write_image(&mut self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+    pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         if key >= self.kind.key_count() {
             return Err(StreamDeckError::InvalidKeyIndex);
         }
@@ -433,7 +434,7 @@ impl StreamDeck {
             }
         )?;
 
-        self.updated = true;
+        self.updated.store(true, Ordering::Release);
         // // flush
         // self.flush()?;
 
@@ -542,7 +543,7 @@ impl StreamDeck {
     }
 
     /// Sets button's image to blank
-    pub fn clear_button_image(&mut self, key: u8) -> Result<(), StreamDeckError> {
+    pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Akp153 => {
                 let key = elgato_to_ajazz(&self.kind, key);
@@ -561,7 +562,7 @@ impl StreamDeck {
     }
 
     /// Sets blank images to every button
-    pub fn clear_all_button_images(&mut self) -> Result<(), StreamDeckError> {
+    pub fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Akp153 => {
                 self.clear_button_image(0xff)
@@ -576,13 +577,13 @@ impl StreamDeck {
     }
 
     /// Sets specified button's image
-    pub fn set_button_image(&mut self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+    pub fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
         let image_data = convert_image(self.kind, image)?;
         Ok(self.write_image(key, &image_data)?)
     }
 
     /// Set logo image
-    pub fn set_logo_image(&mut self, image: DynamicImage) -> Result<(), StreamDeckError> {
+    pub fn set_logo_image(&self, image: DynamicImage) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Akp153 => (),
             _ => {
@@ -701,7 +702,7 @@ impl StreamDeck {
     }
 
     /// Flushes the button's image to the device
-    pub fn flush(&mut self) -> Result<(), StreamDeckError> {
+    pub fn flush(&self) -> Result<(), StreamDeckError> {
         match self.kind {
             Kind::Akp153 => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
@@ -709,22 +710,18 @@ impl StreamDeck {
                 buf.extend(vec![0u8; 512 - buf.len()]);
 
                 write_data(&self.device, buf.as_slice())?;
-
-                self.updated = false;
-
-                Ok(())
             }
-
-            _ => {
-                self.updated = false;
-
-                Ok(())
-            }
+            
+            _ => {}
         }
+
+        self.updated.store(false, Ordering::Release);
+        
+        Ok(())
     }
 
     /// Sets specified touch point's led strip color
-    pub fn set_touchpoint_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+    pub fn set_touchpoint_color(&self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
         if point >= self.kind.touchpoint_count() {
             return Err(StreamDeckError::InvalidTouchPointIndex);
         }
