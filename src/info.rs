@@ -204,7 +204,7 @@ impl Kind {
                 mode: ImageMode::BMP,
                 size: (80, 80),
                 rotation: ImageRotation::Rot90,
-                mirror: ImageMirroring::Y,
+                mirror: ImageMirroring::X,
             },
 
             Kind::Neo | Kind::Xl | Kind::XlV2 => ImageFormat {
