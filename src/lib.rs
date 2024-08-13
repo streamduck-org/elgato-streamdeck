@@ -182,7 +182,7 @@ impl StreamDeck {
                 let bytes = get_feature_report(&self.device, 0x06, 32)?;
                 Ok(extract_str(&bytes[2..])?)
             }
-        }
+        }.map(|s| s.replace('\u{0001}', ""))
     }
 
     /// Returns firmware version of the StreamDeck
