@@ -64,10 +64,6 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
             }
 
             if let Some(serial) = d.serial_number() {
-                if !serial.chars().all(|c| c.is_alphanumeric()) {
-                    return None;
-                }
-
                 Some((Kind::from_pid(d.product_id())?, serial.to_string()))
             } else {
                 None
