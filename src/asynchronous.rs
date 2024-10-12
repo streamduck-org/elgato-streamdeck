@@ -110,6 +110,20 @@ impl AsyncStreamDeck {
         })
     }
 
+    /// Initializes the device
+    pub async fn initialize(&self) -> Result<usize, StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || lock.initialize())?)
+    }
+
+    /// Returns whether the image buffer has been modified.
+    pub async fn is_updated(&self) -> bool {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        block_in_place(move || lock.is_updated())
+    }
+
     /// Resets the device
     pub async fn reset(&self) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
@@ -139,6 +153,20 @@ impl AsyncStreamDeck {
         Ok(block_in_place(move || lock.write_lcd(x, y, rect))?)
     }
 
+    /// Flushes the button's image to the device
+    pub async fn flush(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || lock.flush())?)
+    }
+
+    /// Shutdown the device
+    pub async fn shutdown(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || lock.shutdown())?)
+    }
+
     /// Writes image data to Stream Deck device's lcd strip/screen as full fill
     ///
     /// You can convert your images into proper image_data like this:
@@ -159,7 +187,7 @@ impl AsyncStreamDeck {
         let device = self.device.clone();
         let lock = device.lock().await;
         match self.kind {
-            Kind::Akp153 => Ok(block_in_place(move || lock.clear_button_image(key))?),
+            Kind::Akp153 | Kind::Akp153E => Ok(block_in_place(move || lock.clear_button_image(key))?),
             _ => Ok(block_in_place(move || lock.write_image(key, &image))?),
         }
     }
@@ -207,7 +235,7 @@ impl AsyncDeviceStateReader {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
                     match self.device.kind {
-                        Kind::Akp153 => {
+                        Kind::Akp153 | Kind::Akp153E => {
                             if *their {
                                 updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                 updates.push(DeviceStateUpdate::ButtonUp(index as u8));

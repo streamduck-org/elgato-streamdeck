@@ -1,12 +1,12 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use image::open;
 
-use elgato_streamdeck::{DeviceStateUpdate, list_devices, new_hidapi, StreamDeck};
+use elgato_streamdeck::{DeviceStateUpdate, list_devices, new_hidapi, AsyncStreamDeck};
 use elgato_streamdeck::images::{convert_image_with_format, ImageRect};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Create instance of HidApi
     match new_hidapi() {
         Ok(hid) => {
@@ -15,33 +15,33 @@ fn main() {
                 println!("{:?} {} {}", kind, serial, kind.product_id());
 
                 // Connect to the device
-                let device = StreamDeck::connect(&hid, kind, &serial).expect("Failed to connect");
+                let mut device = AsyncStreamDeck::connect(&hid, kind, &serial).expect("Failed to connect");
                 // Print out some info from the device
-                println!("Connected to '{}' with version '{}'", device.serial_number().unwrap(), device.firmware_version().unwrap());
+                println!("Connected to '{}' with version '{}'", device.serial_number().await.unwrap(), device.firmware_version().await.unwrap());
 
-                device.initialize().unwrap();
-                device.set_brightness(50).unwrap();
-                device.clear_all_button_images().unwrap();
+                device.initialize().await.unwrap();
+                device.set_brightness(50).await.unwrap();
+                device.clear_all_button_images().await.unwrap();
                 // Use image-rs to load an image
                 let image = open("no-place-like-localhost.jpg").unwrap();
 
-                // device.set_logo_image(image.clone()).unwrap();
+                // device.set_logo_image(image.clone()).await.unwrap();
 
                 println!("Key count: {}", kind.key_count());
                 // Write it to the device
                 for i in 0..kind.key_count() as u8 {
-                    device.set_button_image(i, image.clone()).unwrap();
+                    device.set_button_image(i, image.clone()).await.unwrap();
                 }
 
                 println!("Touch point count: {}", kind.touchpoint_count());
                 for i in 0..kind.touchpoint_count() as u8 {
-                    device.set_touchpoint_color(i, 255, 255, 255).unwrap();
+                    device.set_touchpoint_color(i, 255, 255, 255).await.unwrap();
                 }
 
                 if let Some(format) = device.kind().lcd_image_format() {
                     let scaled_image = image.clone().resize_to_fill(format.size.0 as u32, format.size.1 as u32, image::imageops::FilterType::Nearest);
                     let converted_image = convert_image_with_format(format, scaled_image).unwrap();
-                    let _ = device.write_lcd_fill(&converted_image);
+                    let _ = device.write_lcd_fill(&converted_image).await;
                 }
                 
                 let small = match device.kind().lcd_strip_size() {
@@ -54,8 +54,8 @@ fn main() {
                 };
 
                 // Flush
-                if device.is_updated() {
-                    device.flush().unwrap();
+                if device.is_updated().await {
+                    device.flush().await.unwrap();
                 }
 
                 let device = Arc::new(device);
@@ -63,7 +63,7 @@ fn main() {
                     let reader = device.get_reader();
 
                     'infinite: loop {
-                        let updates = match reader.read(Some(Duration::from_secs_f64(100.0))) {
+                        let updates = match reader.read(100.0).await {
                             Ok(updates) => updates,
                             Err(_) => break,
                         };
@@ -98,7 +98,7 @@ fn main() {
                                 DeviceStateUpdate::TouchScreenPress(x, y) => {
                                     println!("Touch Screen press at {x}, {y}");
                                     if let Some(small) = &small {
-                                        device.write_lcd(x, y, small).unwrap();
+                                        device.write_lcd(x, y, small).await.unwrap();
                                     }
                                 }
                                 
@@ -116,7 +116,7 @@ fn main() {
                     drop(reader);
                 }
 
-                device.shutdown().ok();
+                device.shutdown().await.ok();
             }
         }
         Err(e) => eprintln!("Failed to create HidApi instance: {}", e),

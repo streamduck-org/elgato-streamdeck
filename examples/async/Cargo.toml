@@ -1,0 +1,13 @@
+[package]
+name = "simple"
+edition = "2021"
+
+[dependencies]
+hidapi = { version = "2.6", default-features = false }
+image = { version = "0.25.1", default-features = false, features = [
+  "bmp",
+  "jpeg",
+] }
+tokio = { version = "1", optional = false, features = ["full"] }
+async-recursion = { version = "1.0.2", optional = false }
+elgato-streamdeck = { path = "../../", features = ["async"] }

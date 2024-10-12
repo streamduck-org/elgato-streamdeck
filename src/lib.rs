@@ -20,7 +20,7 @@ use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use image::{DynamicImage, ImageError};
 use crate::images::{convert_image, ImageRect};
 
-use crate::info::{ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID, Kind};
+use crate::info::{ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID_1, AJAZZ_VENDOR_ID_2, Kind};
 use crate::util::{
     extract_str, ajazz_to_elgato_input, elgato_to_ajazz, flip_key_index, get_feature_report, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data,
 };
@@ -59,7 +59,7 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
     hidapi
         .device_list()
         .filter_map(|d| {
-            if d.vendor_id() != AJAZZ_VENDOR_ID && d.vendor_id() != ELGATO_VENDOR_ID {
+            if d.vendor_id() != AJAZZ_VENDOR_ID_1 && d.vendor_id() != AJAZZ_VENDOR_ID_2 && d.vendor_id() != ELGATO_VENDOR_ID {
                 return None;
             }
 
@@ -150,7 +150,7 @@ impl StreamDeck {
     /// Returns serial number of the device
     pub fn serial_number(&self) -> Result<String, StreamDeckError> {
         match self.kind {
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let serial = self.device.get_serial_number_string()?;
                 match serial {
                     Some(serial) => {
@@ -189,7 +189,7 @@ impl StreamDeck {
                 Ok(extract_str(&bytes[5..])?)
             }
 
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let bytes = get_feature_report(&self.device, 0x01, 20)?;
                 Ok(extract_str(&bytes[0..])?)
             }
@@ -227,17 +227,12 @@ impl StreamDeck {
                 }
             }
 
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let data = match self.kind {
                     _ => read_data(&self.device, 512, timeout),
                 }?;
 
-                if data[0] != 0 {
-                    return Ok(StreamDeckInput::NoData);
-                }
-
-                // ack ok
-                if data[0] == 65 && data[1] == 67 && data[2] == 75 && data[3] == 0 && data[4] == 0 && data[5] == 79 && data[6] == 75 && data[7] == 0 {
+                if data[0] == 0 {
                     return Ok(StreamDeckInput::NoData);
                 }
 
@@ -268,6 +263,22 @@ impl StreamDeck {
         }
     }
 
+    /// Initializes the device
+    pub fn initialize(&self) -> Result<usize, HidError> {
+        match self.kind {
+            Kind::Akp153 | Kind::Akp153E => {
+                // CRT\x00\x00DIS
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, 0x00, 0x00];
+                buf.extend(vec![0u8; 512 - buf.len()]);
+                write_data(&self.device, buf.as_slice())
+            }
+
+            _ => {
+                Ok(0)
+            }
+        }
+    }
+
     /// Resets the device
     pub fn reset(&self) -> Result<(), StreamDeckError> {
         match self.kind {
@@ -279,7 +290,7 @@ impl StreamDeck {
                 Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
 
-            Kind::Akp153 => Ok({
+            Kind::Akp153 | Kind::Akp153E => Ok({
                 self.set_brightness(100)?;
                 self.clear_button_image(0xff)?;
             }),
@@ -307,7 +318,7 @@ impl StreamDeck {
                 Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
 
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, percent];
 
                 buf.extend(vec![0u8; 512 - buf.len()]);
@@ -335,7 +346,7 @@ impl StreamDeck {
 
         let key = if let Kind::Original = self.kind {
             flip_key_index(&self.kind, key)
-        } else if let Kind::Akp153 = self.kind {
+        } else if let Kind::Akp153 | Kind::Akp153E = self.kind {
             elgato_to_ajazz(&self.kind, key)
         } else {
             key
@@ -346,7 +357,7 @@ impl StreamDeck {
         }
 
         match self.kind {
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![
                     0x43,
                     0x52,
@@ -413,8 +424,8 @@ impl StreamDeck {
                         0,
                         0,
                     ],
-            
-                    Kind::Akp153 => vec![],
+
+                    Kind::Akp153 | Kind::Akp153E => vec![],
             
                     _ => vec![
                         0x02,
@@ -541,7 +552,7 @@ impl StreamDeck {
     /// Sets button's image to blank
     pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         match self.kind {
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let key = elgato_to_ajazz(&self.kind, key);
 
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
@@ -560,7 +571,7 @@ impl StreamDeck {
     /// Sets blank images to every button
     pub fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
         match self.kind {
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 self.clear_button_image(0xff)
             }
             _ => { 
@@ -581,7 +592,7 @@ impl StreamDeck {
     /// Set logo image
     pub fn set_logo_image(&self, image: DynamicImage) -> Result<(), StreamDeckError> {
         match self.kind {
-            Kind::Akp153 => (),
+            Kind::Akp153 | Kind::Akp153E => (),
             _ => {
                 return Err(StreamDeckError::UnsupportedOperation)
             }
@@ -658,13 +669,13 @@ impl StreamDeck {
 
         let image_report_length = match self.kind {
             Kind::Original => 8191,
-            Kind::Akp153 => 512,
+            Kind::Akp153 | Kind::Akp153E => 512,
             _ => 1024,
         };
 
         let image_report_header_length = match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
-            Kind::Akp153 => 0,
+            Kind::Akp153 | Kind::Akp153E => 0,
             _ => 8,
         };
 
@@ -700,7 +711,7 @@ impl StreamDeck {
     /// Flushes the button's image to the device
     pub fn flush(&self) -> Result<(), StreamDeckError> {
         match self.kind {
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
 
                 buf.extend(vec![0u8; 512 - buf.len()]);
@@ -734,7 +745,7 @@ impl StreamDeck {
     /// Sleeps the device
     pub fn sleep(&self) -> Result<(), StreamDeckError> {
         match self.kind {
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4e];
 
                 buf.extend(vec![0u8; 512 - buf.len()]);
@@ -751,7 +762,7 @@ impl StreamDeck {
     /// Shutdown the device
     pub fn shutdown(&self) -> Result<(), StreamDeckError> {
         match self.kind {
-            Kind::Akp153 => {
+            Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
 
                 buf.extend(vec![0u8; 512 - buf.len()]);
@@ -835,13 +846,13 @@ impl WriteImageParameters {
     pub fn for_key(kind: Kind, image_data_len: usize) -> Self {
         let image_report_length = match kind {
             Kind::Original => 8191,
-            Kind::Akp153 => 512,
+            Kind::Akp153 | Kind::Akp153E => 512,
             _ => 1024,
         };
 
         let image_report_header_length = match kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
-            Kind::Akp153 => 0,
+            Kind::Akp153 | Kind::Akp153E => 0,
             _ => 8,
         };
 
@@ -994,7 +1005,7 @@ impl DeviceStateReader {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
                     match self.device.kind {
-                        Kind::Akp153 => {
+                        Kind::Akp153 | Kind::Akp153E => {
                             if *their {
                                 updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                 updates.push(DeviceStateUpdate::ButtonUp(index as u8));
