@@ -7,6 +7,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
+use std::sync::RwLock;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -117,7 +118,7 @@ pub struct StreamDeck {
     /// Connected HIDDevice
     device: HidDevice,
     /// Temporarily cache the image before sending it to the device
-    image_cache: Vec<ImageCache>,
+    image_cache: RwLock<Vec<ImageCache>>,
     /// Device needs to be initialized
     initialized: AtomicBool,
 }
@@ -133,7 +134,7 @@ impl StreamDeck {
     pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<StreamDeck, StreamDeckError> {
         let device = hidapi.open_serial(kind.vendor_id(), kind.product_id(), serial)?;
 
-        Ok(StreamDeck { kind, device, image_cache: vec![], initialized: false.into() })
+        Ok(StreamDeck { kind, device, image_cache: RwLock::new(vec![]), initialized: false.into() })
     }
 }
 
@@ -452,12 +453,12 @@ impl StreamDeck {
     }
 
     /// Writes image data to Stream Deck device
-    pub fn write_image(&mut self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+    pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let cache_entry = ImageCache {
             key,
             image_data: image_data.to_vec(), // Convert &[u8] to Vec<u8>
         };
-        self.image_cache.push(cache_entry);
+        self.image_cache.write()?.push(cache_entry);
 
         Ok(())
     }
@@ -602,7 +603,7 @@ impl StreamDeck {
     }
 
     /// Sets specified button's image
-    pub fn set_button_image(&mut self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+    pub fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
         self.initialize()?;
         let image_data = convert_image(self.kind, image)?;
         Ok(self.write_image(key, &image_data)?)
@@ -793,12 +794,12 @@ impl StreamDeck {
     }
 
     /// Flushes the button's image to the device
-    pub fn flush(&mut self) -> Result<(), StreamDeckError> {
+    pub fn flush(&self) -> Result<(), StreamDeckError> {
         self.initialize()?;
-        if self.image_cache.len() == 0 {
+        if self.image_cache.write()?.len() == 0 {
             return Ok(());
         }
-        for image in &self.image_cache {
+        for image in self.image_cache.read()?.iter() {
             self.send_image(image.key, &image.image_data)?;
         }
         match self.kind {
@@ -813,7 +814,7 @@ impl StreamDeck {
             _ => {}
         }
 
-        self.image_cache.clear();
+        self.image_cache.write()?.clear();
 
         Ok(())
     }

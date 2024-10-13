@@ -116,7 +116,7 @@ impl AsyncStreamDeck {
     /// Writes image data to Stream Deck device
     pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
-        let mut lock = device.lock().await;
+        let lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, image_data))?)
     }
 
@@ -146,7 +146,7 @@ impl AsyncStreamDeck {
     pub async fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         let image = self.kind.blank_image();
         let device = self.device.clone();
-        let mut lock = device.lock().await;
+        let lock = device.lock().await;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => Ok(block_in_place(move || lock.clear_button_image(key))?),
             _ => Ok(block_in_place(move || lock.write_image(key, &image))?),
@@ -165,7 +165,7 @@ impl AsyncStreamDeck {
         let image = convert_image_async(self.kind, image)?;
 
         let device = self.device.clone();
-        let mut lock = device.lock().await;
+        let lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, &image))?)
     }
 
@@ -177,7 +177,7 @@ impl AsyncStreamDeck {
     }
 
     /// Sets specified touch point's led strip color
-    pub async fn set_touchpoint_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+    pub async fn set_touchpoint_color(&self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
         let lock = device.lock().await;
         Ok(block_in_place(move || lock.set_touchpoint_color(point, red, green, blue))?)
@@ -200,7 +200,7 @@ impl AsyncStreamDeck {
     /// Flushes the button's image to the device
     pub async fn flush(&self) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
-        let mut lock = device.lock().await;
+        let lock = device.lock().await;
         Ok(block_in_place(move || lock.flush())?)
     }
 

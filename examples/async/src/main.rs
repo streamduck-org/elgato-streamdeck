@@ -15,7 +15,7 @@ async fn main() {
                 println!("{:?} {} {}", kind, serial, kind.product_id());
 
                 // Connect to the device
-                let mut device = AsyncStreamDeck::connect(&hid, kind, &serial).expect("Failed to connect");
+                let device = AsyncStreamDeck::connect(&hid, kind, &serial).expect("Failed to connect");
                 // Print out some info from the device
                 println!("Connected to '{}' with version '{}'", device.serial_number().await.unwrap(), device.firmware_version().await.unwrap());
 
