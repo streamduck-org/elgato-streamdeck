@@ -99,31 +99,6 @@ impl AsyncStreamDeck {
         }
     }
 
-    /// Returns button state reader for this device
-    pub fn get_reader(&self) -> Arc<AsyncDeviceStateReader> {
-        Arc::new(AsyncDeviceStateReader {
-            device: self.clone(),
-            states: Mutex::new(DeviceState {
-                buttons: vec![false; self.kind.key_count() as usize + self.kind.touchpoint_count() as usize],
-                encoders: vec![false; self.kind.encoder_count() as usize],
-            }),
-        })
-    }
-
-    /// Initializes the device
-    pub async fn initialize(&self) -> Result<usize, StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.initialize())?)
-    }
-
-    /// Returns whether the image buffer has been modified.
-    pub async fn is_updated(&self) -> bool {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        block_in_place(move || lock.is_updated())
-    }
-
     /// Resets the device
     pub async fn reset(&self) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
@@ -141,7 +116,7 @@ impl AsyncStreamDeck {
     /// Writes image data to Stream Deck device
     pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, image_data))?)
     }
 
@@ -151,20 +126,6 @@ impl AsyncStreamDeck {
         let device = self.device.clone();
         let lock = device.lock().await;
         Ok(block_in_place(move || lock.write_lcd(x, y, rect))?)
-    }
-
-    /// Flushes the button's image to the device
-    pub async fn flush(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.flush())?)
-    }
-
-    /// Shutdown the device
-    pub async fn shutdown(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.shutdown())?)
     }
 
     /// Writes image data to Stream Deck device's lcd strip/screen as full fill
@@ -185,7 +146,7 @@ impl AsyncStreamDeck {
     pub async fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         let image = self.kind.blank_image();
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => Ok(block_in_place(move || lock.clear_button_image(key))?),
             _ => Ok(block_in_place(move || lock.write_image(key, &image))?),
@@ -204,8 +165,15 @@ impl AsyncStreamDeck {
         let image = convert_image_async(self.kind, image)?;
 
         let device = self.device.clone();
-        let lock = device.lock().await;
+        let mut lock = device.lock().await;
         Ok(block_in_place(move || lock.write_image(key, &image))?)
+    }
+
+    /// Set logo image
+    pub async fn set_logo_image(&self, image: DynamicImage) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || lock.set_logo_image(image))?)
     }
 
     /// Sets specified touch point's led strip color
@@ -213,6 +181,38 @@ impl AsyncStreamDeck {
         let device = self.device.clone();
         let lock = device.lock().await;
         Ok(block_in_place(move || lock.set_touchpoint_color(point, red, green, blue))?)
+    }
+
+    /// Sleeps the device
+    pub async fn sleep(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || lock.sleep())?)
+    }
+
+    /// Shutdown the device
+    pub async fn shutdown(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let lock = device.lock().await;
+        Ok(block_in_place(move || lock.shutdown())?)
+    }
+
+    /// Flushes the button's image to the device
+    pub async fn flush(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.clone();
+        let mut lock = device.lock().await;
+        Ok(block_in_place(move || lock.flush())?)
+    }
+
+    /// Returns button state reader for this device
+    pub fn get_reader(&self) -> Arc<AsyncDeviceStateReader> {
+        Arc::new(AsyncDeviceStateReader {
+            device: self.clone(),
+            states: Mutex::new(DeviceState {
+                buttons: vec![false; self.kind.key_count() as usize + self.kind.touchpoint_count() as usize],
+                encoders: vec![false; self.kind.encoder_count() as usize],
+            }),
+        })
     }
 }
 

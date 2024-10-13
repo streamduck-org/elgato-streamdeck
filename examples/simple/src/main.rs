@@ -15,11 +15,10 @@ fn main() {
                 println!("{:?} {} {}", kind, serial, kind.product_id());
 
                 // Connect to the device
-                let device = StreamDeck::connect(&hid, kind, &serial).expect("Failed to connect");
+                let mut device = StreamDeck::connect(&hid, kind, &serial).expect("Failed to connect");
                 // Print out some info from the device
                 println!("Connected to '{}' with version '{}'", device.serial_number().unwrap(), device.firmware_version().unwrap());
 
-                device.initialize().unwrap();
                 device.set_brightness(50).unwrap();
                 device.clear_all_button_images().unwrap();
                 // Use image-rs to load an image
@@ -54,9 +53,7 @@ fn main() {
                 };
 
                 // Flush
-                if device.is_updated() {
-                    device.flush().unwrap();
-                }
+                device.flush().unwrap();
 
                 let device = Arc::new(device);
                 {

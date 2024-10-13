@@ -116,8 +116,15 @@ pub struct StreamDeck {
     kind: Kind,
     /// Connected HIDDevice
     device: HidDevice,
-    /// Image buffers updated
-    updated: AtomicBool,
+    /// Temporarily cache the image before sending it to the device
+    image_cache: Vec<ImageCache>,
+    /// Device needs to be initialized
+    initialized: AtomicBool,
+}
+
+struct ImageCache {
+    key: u8,
+    image_data: Vec<u8>,
 }
 
 /// Static functions of the struct
@@ -126,7 +133,7 @@ impl StreamDeck {
     pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<StreamDeck, StreamDeckError> {
         let device = hidapi.open_serial(kind.vendor_id(), kind.product_id(), serial)?;
 
-        Ok(StreamDeck { kind, device, updated: false.into() })
+        Ok(StreamDeck { kind, device, image_cache: vec![], initialized: false.into() })
     }
 }
 
@@ -201,13 +208,29 @@ impl StreamDeck {
         }
     }
 
-    /// Returns whether the image buffer has been modified.
-    pub fn is_updated(&self) -> bool {
-        self.updated.load(Ordering::Acquire)
+    /// Initializes the device
+    fn initialize(&self) -> Result<(), StreamDeckError> {
+        if self.initialized.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        self.initialized.store(true, Ordering::Release);
+        match self.kind {
+            Kind::Akp153 | Kind::Akp153E => {
+                // CRT\x00\x00DIS
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, 0x00, 0x00];
+                buf.extend(vec![0u8; 512 - buf.len()]);
+                 write_data(&self.device, buf.as_slice())?;
+            }
+
+            _ => {
+            }
+        }
+        Ok(())
     }
 
     /// Reads all possible input from Stream Deck device
     pub fn read_input(&self, timeout: Option<Duration>) -> Result<StreamDeckInput, StreamDeckError> {
+        self.initialize()?;
         match &self.kind {
             Kind::Plus => {
                 let data = read_data(&self.device, 14.max(5 + self.kind.encoder_count() as usize), timeout)?;
@@ -263,24 +286,9 @@ impl StreamDeck {
         }
     }
 
-    /// Initializes the device
-    pub fn initialize(&self) -> Result<usize, HidError> {
-        match self.kind {
-            Kind::Akp153 | Kind::Akp153E => {
-                // CRT\x00\x00DIS
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, 0x00, 0x00];
-                buf.extend(vec![0u8; 512 - buf.len()]);
-                write_data(&self.device, buf.as_slice())
-            }
-
-            _ => {
-                Ok(0)
-            }
-        }
-    }
-
     /// Resets the device
     pub fn reset(&self) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
                 let mut buf = vec![0x0B, 0x63];
@@ -307,6 +315,7 @@ impl StreamDeck {
 
     /// Sets brightness of the device, value range is 0 - 100
     pub fn set_brightness(&self, percent: u8) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         let percent = percent.max(0).min(100);
 
         match self.kind {
@@ -338,8 +347,7 @@ impl StreamDeck {
         }
     }
 
-    /// Writes image data to Stream Deck device
-    pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+    fn send_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         if key >= self.kind.key_count() {
             return Err(StreamDeckError::InvalidKeyIndex);
         }
@@ -440,10 +448,16 @@ impl StreamDeck {
                 }
             }
         )?;
+        Ok(())
+    }
 
-        self.updated.store(true, Ordering::Release);
-        // // flush
-        // self.flush()?;
+    /// Writes image data to Stream Deck device
+    pub fn write_image(&mut self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        let cache_entry = ImageCache {
+            key,
+            image_data: image_data.to_vec(), // Convert &[u8] to Vec<u8>
+        };
+        self.image_cache.push(cache_entry);
 
         Ok(())
     }
@@ -451,6 +465,7 @@ impl StreamDeck {
     /// Writes image data to Stream Deck device's lcd strip/screen as region. 
     /// Only Stream Deck Plus supports writing LCD regions, for Stream Deck Neo use write_lcd_fill
     pub fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Plus => (),
             _ => {
@@ -494,6 +509,7 @@ impl StreamDeck {
     /// device.write_lcd_fill(&image_data);
     /// ```
     pub fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Neo => {
                 self.write_image_data_reports(
@@ -551,6 +567,7 @@ impl StreamDeck {
 
     /// Sets button's image to blank
     pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => {
                 let key = elgato_to_ajazz(&self.kind, key);
@@ -564,12 +581,13 @@ impl StreamDeck {
                 Ok(())
             }
 
-            _ => Ok(self.write_image(key, &self.kind.blank_image())?),
+            _ => Ok(self.send_image(key, &self.kind.blank_image())?),
         }
     }
 
     /// Sets blank images to every button
     pub fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => {
                 self.clear_button_image(0xff)
@@ -584,13 +602,15 @@ impl StreamDeck {
     }
 
     /// Sets specified button's image
-    pub fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+    pub fn set_button_image(&mut self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         let image_data = convert_image(self.kind, image)?;
         Ok(self.write_image(key, &image_data)?)
     }
 
     /// Set logo image
     pub fn set_logo_image(&self, image: DynamicImage) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => (),
             _ => {
@@ -708,27 +728,9 @@ impl StreamDeck {
         Ok(())
     }
 
-    /// Flushes the button's image to the device
-    pub fn flush(&self) -> Result<(), StreamDeckError> {
-        match self.kind {
-            Kind::Akp153 | Kind::Akp153E => {
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
-
-                buf.extend(vec![0u8; 512 - buf.len()]);
-
-                write_data(&self.device, buf.as_slice())?;
-            }
-            
-            _ => {}
-        }
-
-        self.updated.store(false, Ordering::Release);
-        
-        Ok(())
-    }
-
     /// Sets specified touch point's led strip color
     pub fn set_touchpoint_color(&self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         if point >= self.kind.touchpoint_count() {
             return Err(StreamDeckError::InvalidTouchPointIndex);
         }
@@ -744,6 +746,7 @@ impl StreamDeck {
 
     /// Sleeps the device
     pub fn sleep(&self) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4e];
@@ -761,6 +764,7 @@ impl StreamDeck {
 
     /// Shutdown the device
     pub fn shutdown(&self) -> Result<(), StreamDeckError> {
+        self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
@@ -786,6 +790,32 @@ impl StreamDeck {
 
             _ => Err(StreamDeckError::UnsupportedOperation),
         }
+    }
+
+    /// Flushes the button's image to the device
+    pub fn flush(&mut self) -> Result<(), StreamDeckError> {
+        self.initialize()?;
+        if self.image_cache.len() == 0 {
+            return Ok(());
+        }
+        for image in &self.image_cache {
+            self.send_image(image.key, &image.image_data)?;
+        }
+        match self.kind {
+            Kind::Akp153 | Kind::Akp153E => {
+                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
+
+                buf.extend(vec![0u8; 512 - buf.len()]);
+
+                write_data(&self.device, buf.as_slice())?;
+            }
+
+            _ => {}
+        }
+
+        self.image_cache.clear();
+
+        Ok(())
     }
 
     /// Returns button state reader for this device

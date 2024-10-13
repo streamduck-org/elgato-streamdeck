@@ -19,7 +19,6 @@ async fn main() {
                 // Print out some info from the device
                 println!("Connected to '{}' with version '{}'", device.serial_number().await.unwrap(), device.firmware_version().await.unwrap());
 
-                device.initialize().await.unwrap();
                 device.set_brightness(50).await.unwrap();
                 device.clear_all_button_images().await.unwrap();
                 // Use image-rs to load an image
@@ -54,9 +53,7 @@ async fn main() {
                 };
 
                 // Flush
-                if device.is_updated().await {
-                    device.flush().await.unwrap();
-                }
+                device.flush().await.unwrap();
 
                 let device = Arc::new(device);
                 {
