@@ -34,6 +34,18 @@ pub const AJAZZ_VENDOR_ID_2: u16 = 0x0300;
 /// Product ID of Ajazz Stream Deck AKP153E
 pub const PID_AJAZZ_E_AKP153E: u16 = 0x1010;
 
+const RECOGNIZED_VENDORS: &'static [u16] = &[
+    ELGATO_VENDOR_ID,
+    AJAZZ_VENDOR_ID_1,
+    AJAZZ_VENDOR_ID_2
+];
+
+/// Returns true for vendors IDs that are recognized by the library
+pub fn is_vendor_familiar(vendor: &u16) -> bool {
+    RECOGNIZED_VENDORS.contains(vendor)
+}
+
+
 /// Enum describing kinds of Stream Decks out there
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Kind {

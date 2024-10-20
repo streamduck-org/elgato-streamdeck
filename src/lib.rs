@@ -60,7 +60,7 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
     hidapi
         .device_list()
         .filter_map(|d| {
-            if d.vendor_id() != AJAZZ_VENDOR_ID_1 && d.vendor_id() != AJAZZ_VENDOR_ID_2 && d.vendor_id() != ELGATO_VENDOR_ID {
+            if !is_vendor_familiar(&d.vendor_id()) {
                 return None;
             }
 
