@@ -57,39 +57,34 @@ impl AsyncStreamDeck {
 
     /// Returns manufacturer string of the device
     pub async fn manufacturer(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.manufacturer())?)
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.manufacturer())?)
     }
 
     /// Returns product string of the device
     pub async fn product(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.product())?)
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.product())?)
     }
 
     /// Returns serial number of the device
     pub async fn serial_number(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.serial_number())?)
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.serial_number())?)
     }
 
     /// Returns firmware version of the StreamDeck
     pub async fn firmware_version(&self) -> Result<String, StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.firmware_version())?)
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.firmware_version())?)
     }
 
     /// Reads button states, awaits until there's data.
     /// Poll rate determines how often button state gets checked
     pub async fn read_input(&self, poll_rate: f32) -> Result<StreamDeckInput, StreamDeckError> {
         loop {
-            let device = self.device.clone();
-            let lock = device.lock().await;
-            let data = block_in_place(move || lock.read_input(None))?;
+            let device = self.device.lock().await;
+            let data = block_in_place(move || device.read_input(None))?;
 
             if !data.is_empty() {
                 return Ok(data);
@@ -97,6 +92,98 @@ impl AsyncStreamDeck {
 
             sleep(Duration::from_secs_f32(1.0 / poll_rate)).await;
         }
+    }
+
+    /// Resets the device
+    pub async fn reset(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.reset())?)
+    }
+
+    /// Sets brightness of the device, value range is 0 - 100
+    pub async fn set_brightness(&self, percent: u8) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.set_brightness(percent))?)
+    }
+
+    /// Writes image data to Stream Deck device, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
+    pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.write_image(key, image_data))?)
+    }
+
+    /// Writes image data to Stream Deck device's lcd strip/screen as region. 
+    /// Only Stream Deck Plus supports writing LCD regions, for Stream Deck Neo use write_lcd_fill
+    pub async fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.write_lcd(x, y, rect))?)
+    }
+
+    /// Writes image data to Stream Deck device's lcd strip/screen as full fill
+    ///
+    /// You can convert your images into proper image_data like this:
+    /// ```
+    /// use elgato_streamdeck::images::{convert_image_with_format_async};
+    /// let image_data = convert_image_with_format_async(device.kind().lcd_image_format(), image).await.unwrap();
+    /// device.write_lcd_fill(&image_data).await;
+    /// ```
+    pub async fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.write_lcd_fill(image_data))?)
+    }
+
+    /// Sets button's image to blank, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
+    pub async fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.clear_button_image(key))?)
+    }
+
+    /// Sets blank images to every button, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
+    pub async fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.clear_all_button_images())?)
+    }
+
+    /// Sets specified button's image, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
+    pub async fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
+        let image = convert_image_async(self.kind, image)?;
+
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.write_image(key, &image))?)
+    }
+
+    /// Set logo image
+    pub async fn set_logo_image(&self, image: DynamicImage) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.set_logo_image(image))?)
+    }
+
+    /// Sets specified touch point's led strip color
+    pub async fn set_touchpoint_color(&self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.set_touchpoint_color(point, red, green, blue))?)
+    }
+
+    /// Sleeps the device
+    pub async fn sleep(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.sleep())?)
+    }
+
+    /// Shutdown the device
+    pub async fn shutdown(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.shutdown())?)
+    }
+
+    /// Flushes the button's image to the device
+    pub async fn flush(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.flush())?)
     }
 
     /// Returns button state reader for this device
@@ -109,83 +196,6 @@ impl AsyncStreamDeck {
             }),
         })
     }
-
-    /// Resets the device
-    pub async fn reset(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.reset())?)
-    }
-
-    /// Sets brightness of the device, value range is 0 - 100
-    pub async fn set_brightness(&self, percent: u8) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.set_brightness(percent))?)
-    }
-
-    /// Writes image data to Stream Deck device
-    pub async fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.write_image(key, image_data))?)
-    }
-
-    /// Writes image data to Stream Deck device's lcd strip/screen as region. 
-    /// Only Stream Deck Plus supports writing LCD regions, for Stream Deck Neo use write_lcd_fill
-    pub async fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.write_lcd(x, y, rect))?)
-    }
-
-    /// Writes image data to Stream Deck device's lcd strip/screen as full fill
-    ///
-    /// You can convert your images into proper image_data like this:
-    /// ```
-    /// use elgato_streamdeck::images::{convert_image_with_format_async};
-    /// let image_data = convert_image_with_format_async(device.kind().lcd_image_format(), image).await.unwrap();
-    /// device.write_lcd_fill(&image_data).await;
-    /// ```
-    pub async fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.write_lcd_fill(image_data))?)
-    }
-
-    /// Sets button's image to blank
-    pub async fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
-        let image = self.kind.blank_image();
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        match self.kind {
-            Kind::Akp153 => Ok(block_in_place(move || lock.clear_button_image(key))?),
-            _ => Ok(block_in_place(move || lock.write_image(key, &image))?),
-        }
-    }
-
-    /// Sets blank images to every button
-    pub async fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.clear_all_button_images())?)
-    }
-
-    /// Sets specified button's image
-    pub async fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
-        let image = convert_image_async(self.kind, image)?;
-
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.write_image(key, &image))?)
-    }
-
-    /// Sets specified touch point's led strip color
-    pub async fn set_touchpoint_color(&mut self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
-        let device = self.device.clone();
-        let lock = device.lock().await;
-        Ok(block_in_place(move || lock.set_touchpoint_color(point, red, green, blue))?)
-    }
 }
 
 /// Button reader that keeps state of the Stream Deck and returns events instead of full states
@@ -196,7 +206,6 @@ pub struct AsyncDeviceStateReader {
 
 impl AsyncDeviceStateReader {
     /// Reads states and returns updates
-    #[async_recursion::async_recursion]
     pub async fn read(&self, poll_rate: f32) -> Result<Vec<DeviceStateUpdate>, StreamDeckError> {
         let input = self.device.read_input(poll_rate).await?;
         let mut my_states = self.states.lock().await;
@@ -207,7 +216,7 @@ impl AsyncDeviceStateReader {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
                     match self.device.kind {
-                        Kind::Akp153 => {
+                        Kind::Akp153 | Kind::Akp153E => {
                             if *their {
                                 updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                 updates.push(DeviceStateUpdate::ButtonUp(index as u8));
@@ -275,10 +284,6 @@ impl AsyncDeviceStateReader {
 
         drop(my_states);
 
-        if updates.is_empty() {
-            self.read(poll_rate).await
-        } else {
-            Ok(updates)
-        }
+        Ok(updates)
     }
 }

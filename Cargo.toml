@@ -2,7 +2,7 @@
 name = "elgato-streamdeck"
 description = "HidApi driver for Elgato Stream Decks"
 authors = ["TheJebForge"]
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 readme = "README.md"
 homepage = "https://github.com/streamduck-org"
@@ -11,23 +11,18 @@ license = "MPL-2.0"
 
 [dependencies]
 hidapi = { version = "2.6", default-features = false }
-image = { version = "0.25.1", default-features = false, features = [
+image = { version = "0.25.4", default-features = false, features = [
   "bmp",
   "jpeg",
 ] }
 tokio = { version = "1", optional = true }
-async-recursion = { version = "1.0.2", optional = true }
-
-[dev-dependencies]
-serial_test = "2.0.0"
 
 [features]
 async = [
   "tokio",
   "tokio/sync",
   "tokio/rt-multi-thread",
-  "tokio/time",
-  "async-recursion",
+  "tokio/time"
 ]
 
 [package.metadata.docs.rs]

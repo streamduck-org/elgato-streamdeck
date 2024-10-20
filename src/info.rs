@@ -23,10 +23,28 @@ pub const PID_STREAMDECK_PEDAL: u16 = 0x0086;
 pub const PID_STREAMDECK_PLUS: u16 = 0x0084;
 
 /// Vendor ID of Ajazz Stream Deck
-pub const AJAZZ_VENDOR_ID: u16 = 0x5548;
+pub const AJAZZ_VENDOR_ID_1: u16 = 0x5548;
 
-/// Product ID of Ajazz Stream Deck AK153
+/// Product ID of Ajazz Stream Deck AKP153
 pub const PID_AJAZZ_AKP153: u16 = 0x6674;
+
+/// Vendor ID of Ajazz Stream Deck AKP153E
+pub const AJAZZ_VENDOR_ID_2: u16 = 0x0300;
+
+/// Product ID of Ajazz Stream Deck AKP153E
+pub const PID_AJAZZ_E_AKP153E: u16 = 0x1010;
+
+const RECOGNIZED_VENDORS: &'static [u16] = &[
+    ELGATO_VENDOR_ID,
+    AJAZZ_VENDOR_ID_1,
+    AJAZZ_VENDOR_ID_2
+];
+
+/// Returns true for vendors IDs that are recognized by the library
+pub fn is_vendor_familiar(vendor: &u16) -> bool {
+    RECOGNIZED_VENDORS.contains(vendor)
+}
+
 
 /// Enum describing kinds of Stream Decks out there
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
@@ -51,26 +69,37 @@ pub enum Kind {
     Pedal,
     /// Stream Deck Plus
     Plus,
-    /// Ajazz Stream Deck AK153
+    /// Ajazz Stream Deck AKP153
     Akp153,
+    /// Ajazz Stream Deck AKP153E
+    Akp153E,
 }
 
 impl Kind {
-    /// Creates [Kind] variant from Product ID
-    pub fn from_pid(pid: u16) -> Option<Kind> {
-        match pid {
-            PID_STREAMDECK_ORIGINAL => Some(Kind::Original),
-            PID_STREAMDECK_ORIGINAL_V2 => Some(Kind::OriginalV2),
-            PID_STREAMDECK_MINI => Some(Kind::Mini),
-            PID_STREAMDECK_XL => Some(Kind::Xl),
-            PID_STREAMDECK_XL_V2 => Some(Kind::XlV2),
-            PID_STREAMDECK_MK2 => Some(Kind::Mk2),
-            PID_STREAMDECK_MINI_MK2 => Some(Kind::MiniMk2),
-            PID_STREAMDECK_NEO => Some(Kind::Neo),
-            PID_STREAMDECK_PEDAL => Some(Kind::Pedal),
-            PID_STREAMDECK_PLUS => Some(Kind::Plus),
-            PID_AJAZZ_AKP153 => Some(Kind::Akp153),
-            _ => None,
+    /// Creates [Kind] variant from Vendor ID and Product ID
+    pub fn from_vid_pid(vid: u16, pid: u16) -> Option<Kind> {
+        match vid {
+            ELGATO_VENDOR_ID => match pid {
+                PID_STREAMDECK_ORIGINAL => Some(Kind::Original),
+                PID_STREAMDECK_ORIGINAL_V2 => Some(Kind::OriginalV2),
+                PID_STREAMDECK_MINI => Some(Kind::Mini),
+                PID_STREAMDECK_XL => Some(Kind::Xl),
+                PID_STREAMDECK_XL_V2 => Some(Kind::XlV2),
+                PID_STREAMDECK_MK2 => Some(Kind::Mk2),
+                PID_STREAMDECK_MINI_MK2 => Some(Kind::MiniMk2),
+                PID_STREAMDECK_NEO => Some(Kind::Neo),
+                PID_STREAMDECK_PEDAL => Some(Kind::Pedal),
+                PID_STREAMDECK_PLUS => Some(Kind::Plus),
+                _ => None
+            },
+            
+            AJAZZ_VENDOR_ID_1 | AJAZZ_VENDOR_ID_2 => match pid {
+                PID_AJAZZ_AKP153 => Some(Kind::Akp153),
+                PID_AJAZZ_E_AKP153E => Some(Kind::Akp153E),
+                _ => None
+            }
+            
+            _ => None
         }
     }
 
@@ -88,6 +117,7 @@ impl Kind {
             Kind::Pedal => PID_STREAMDECK_PEDAL,
             Kind::Plus => PID_STREAMDECK_PLUS,
             Kind::Akp153 => PID_AJAZZ_AKP153,
+            Kind::Akp153E => PID_AJAZZ_E_AKP153E,
         }
     }
 
@@ -104,7 +134,8 @@ impl Kind {
             Kind::Neo => ELGATO_VENDOR_ID,
             Kind::Pedal => ELGATO_VENDOR_ID,
             Kind::Plus => ELGATO_VENDOR_ID,
-            Kind::Akp153 => AJAZZ_VENDOR_ID,
+            Kind::Akp153 => AJAZZ_VENDOR_ID_1,
+            Kind::Akp153E => AJAZZ_VENDOR_ID_2,
         }
     }
 
@@ -116,7 +147,7 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 32,
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 8,
-            Kind::Akp153 => 15 + 3,
+            Kind::Akp153 | Kind::Akp153E => 15 + 3,
         }
     }
 
@@ -128,7 +159,7 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 4,
             Kind::Pedal => 1,
             Kind::Neo | Kind::Plus => 2,
-            Kind::Akp153 => 3,
+            Kind::Akp153 | Kind::Akp153E => 3,
         }
     }
 
@@ -141,6 +172,7 @@ impl Kind {
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 4,
             Kind::Akp153 => 6,
+            Kind::Akp153E => 6,
         }
     }
 
@@ -165,7 +197,7 @@ impl Kind {
         match self {
             Kind::Plus => Some((800, 100)),
             Kind::Neo => Some((248, 58)),
-            Kind::Akp153 => Some((854, 480)), // logo
+            Kind::Akp153 | Kind::Akp153E => Some((854, 480)), // logo
             _ => None,
         }
     }
@@ -223,7 +255,7 @@ impl Kind {
 
             Kind::Pedal => ImageFormat::default(),
 
-            Kind::Akp153 => ImageFormat {
+            Kind::Akp153 | Kind::Akp153E => ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (85, 85),
                 rotation: ImageRotation::Rot90,
