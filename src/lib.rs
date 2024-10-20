@@ -7,23 +7,23 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
 
-use std::sync::RwLock;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::zip;
 use std::str::Utf8Error;
-use std::sync::{Arc, Mutex, PoisonError};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::RwLock;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
+use crate::images::{convert_image, ImageRect};
 use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use image::{DynamicImage, ImageError};
-use crate::images::{convert_image, ImageRect};
 
-use crate::info::{ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID_1, AJAZZ_VENDOR_ID_2, Kind};
+use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
-    extract_str, ajazz_to_elgato_input, elgato_to_ajazz, flip_key_index, get_feature_report, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data,
+    ajazz_to_elgato_input, elgato_to_ajazz, extract_str, flip_key_index, get_feature_report, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data,
 };
 
 /// Various information about Stream Deck devices
@@ -65,7 +65,7 @@ pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
             }
 
             if let Some(serial) = d.serial_number() {
-                Some((Kind::from_pid(d.product_id())?, serial.to_string()))
+                Some((Kind::from_vid_pid(d.vendor_id(), d.product_id())?, serial.to_string()))
             } else {
                 None
             }

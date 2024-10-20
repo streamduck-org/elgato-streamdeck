@@ -76,22 +76,30 @@ pub enum Kind {
 }
 
 impl Kind {
-    /// Creates [Kind] variant from Product ID
-    pub fn from_pid(pid: u16) -> Option<Kind> {
-        match pid {
-            PID_STREAMDECK_ORIGINAL => Some(Kind::Original),
-            PID_STREAMDECK_ORIGINAL_V2 => Some(Kind::OriginalV2),
-            PID_STREAMDECK_MINI => Some(Kind::Mini),
-            PID_STREAMDECK_XL => Some(Kind::Xl),
-            PID_STREAMDECK_XL_V2 => Some(Kind::XlV2),
-            PID_STREAMDECK_MK2 => Some(Kind::Mk2),
-            PID_STREAMDECK_MINI_MK2 => Some(Kind::MiniMk2),
-            PID_STREAMDECK_NEO => Some(Kind::Neo),
-            PID_STREAMDECK_PEDAL => Some(Kind::Pedal),
-            PID_STREAMDECK_PLUS => Some(Kind::Plus),
-            PID_AJAZZ_AKP153 => Some(Kind::Akp153),
-            PID_AJAZZ_E_AKP153E => Some(Kind::Akp153E),
-            _ => None,
+    /// Creates [Kind] variant from Vendor ID and Product ID
+    pub fn from_vid_pid(vid: u16, pid: u16) -> Option<Kind> {
+        match vid {
+            ELGATO_VENDOR_ID => match pid {
+                PID_STREAMDECK_ORIGINAL => Some(Kind::Original),
+                PID_STREAMDECK_ORIGINAL_V2 => Some(Kind::OriginalV2),
+                PID_STREAMDECK_MINI => Some(Kind::Mini),
+                PID_STREAMDECK_XL => Some(Kind::Xl),
+                PID_STREAMDECK_XL_V2 => Some(Kind::XlV2),
+                PID_STREAMDECK_MK2 => Some(Kind::Mk2),
+                PID_STREAMDECK_MINI_MK2 => Some(Kind::MiniMk2),
+                PID_STREAMDECK_NEO => Some(Kind::Neo),
+                PID_STREAMDECK_PEDAL => Some(Kind::Pedal),
+                PID_STREAMDECK_PLUS => Some(Kind::Plus),
+                _ => None
+            },
+            
+            AJAZZ_VENDOR_ID_1 | AJAZZ_VENDOR_ID_2 => match pid {
+                PID_AJAZZ_AKP153 => Some(Kind::Akp153),
+                PID_AJAZZ_E_AKP153E => Some(Kind::Akp153E),
+                _ => None
+            }
+            
+            _ => None
         }
     }
 
