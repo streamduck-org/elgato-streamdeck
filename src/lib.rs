@@ -452,12 +452,14 @@ impl StreamDeck {
         Ok(())
     }
 
-    /// Writes image data to Stream Deck device
+    /// Writes image data to Stream Deck device, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
     pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         let cache_entry = ImageCache {
             key,
             image_data: image_data.to_vec(), // Convert &[u8] to Vec<u8>
         };
+        
         self.image_cache.write()?.push(cache_entry);
 
         Ok(())
@@ -566,7 +568,8 @@ impl StreamDeck {
         }
     }
 
-    /// Sets button's image to blank
+    /// Sets button's image to blank, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
     pub fn clear_button_image(&self, key: u8) -> Result<(), StreamDeckError> {
         self.initialize()?;
         match self.kind {
@@ -586,7 +589,8 @@ impl StreamDeck {
         }
     }
 
-    /// Sets blank images to every button
+    /// Sets blank images to every button, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
     pub fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
         self.initialize()?;
         match self.kind {
@@ -602,7 +606,8 @@ impl StreamDeck {
         }
     }
 
-    /// Sets specified button's image
+    /// Sets specified button's image, changes must be flushed with `.flush()` before
+    /// they will appear on the device!
     pub fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
         self.initialize()?;
         let image_data = convert_image(self.kind, image)?;
@@ -796,12 +801,15 @@ impl StreamDeck {
     /// Flushes the button's image to the device
     pub fn flush(&self) -> Result<(), StreamDeckError> {
         self.initialize()?;
+        
         if self.image_cache.write()?.len() == 0 {
             return Ok(());
         }
+        
         for image in self.image_cache.read()?.iter() {
             self.send_image(image.key, &image.image_data)?;
         }
+        
         match self.kind {
             Kind::Akp153 | Kind::Akp153E => {
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
