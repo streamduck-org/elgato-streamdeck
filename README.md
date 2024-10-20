@@ -77,3 +77,4 @@ But as it stands, this library should support following devices:
 - Stream Deck Plus (thanks to [node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck))
 - Stream Deck Neo (thanks to [@ejiektpobehuk](https://github.com/ejiektpobehuk), [@AkechiShiro](https://github.com/AkechiShiro) and [node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck))
 - Ajazz AKP153 (thanks to [@ZCube](https://github.com/ZCube))
+- Ajazz AKP153E (thanks to [@teras](https://github.com/teras))
