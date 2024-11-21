@@ -113,7 +113,7 @@ impl AsyncStreamDeck {
         Ok(block_in_place(move || device.write_image(key, image_data))?)
     }
 
-    /// Writes image data to Stream Deck device's lcd strip/screen as region. 
+    /// Writes image data to Stream Deck device's lcd strip/screen as region.
     /// Only Stream Deck Plus supports writing LCD regions, for Stream Deck Neo use write_lcd_fill
     pub async fn write_lcd(&self, x: u16, y: u16, rect: &ImageRect) -> Result<(), StreamDeckError> {
         let device = self.device.lock().await;
@@ -216,7 +216,7 @@ impl AsyncDeviceStateReader {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
                     match self.device.kind {
-                        Kind::Akp153 | Kind::Akp153E => {
+                        Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => {
                             if *their {
                                 updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                 updates.push(DeviceStateUpdate::ButtonUp(index as u8));

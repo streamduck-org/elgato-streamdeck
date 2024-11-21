@@ -28,6 +28,9 @@ pub const AJAZZ_VENDOR_ID_1: u16 = 0x5548;
 /// Product ID of Ajazz Stream Deck AKP153
 pub const PID_AJAZZ_AKP153: u16 = 0x6674;
 
+/// Product ID of the "FHOOU" (front label) and "MiraBox HSV293S" (rear label). Seems just like an AKP153.
+pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
+
 /// Vendor ID of Ajazz Stream Deck AKP153E
 pub const AJAZZ_VENDOR_ID_2: u16 = 0x0300;
 
@@ -73,6 +76,8 @@ pub enum Kind {
     Akp153,
     /// Ajazz Stream Deck AKP153E
     Akp153E,
+    /// MiraBox HSV293S
+    MiraBoxHSV293S,
 }
 
 impl Kind {
@@ -92,13 +97,14 @@ impl Kind {
                 PID_STREAMDECK_PLUS => Some(Kind::Plus),
                 _ => None
             },
-            
+
             AJAZZ_VENDOR_ID_1 | AJAZZ_VENDOR_ID_2 => match pid {
                 PID_AJAZZ_AKP153 => Some(Kind::Akp153),
                 PID_AJAZZ_E_AKP153E => Some(Kind::Akp153E),
+                PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
                 _ => None
-            }
-            
+            },
+
             _ => None
         }
     }
@@ -118,6 +124,7 @@ impl Kind {
             Kind::Plus => PID_STREAMDECK_PLUS,
             Kind::Akp153 => PID_AJAZZ_AKP153,
             Kind::Akp153E => PID_AJAZZ_E_AKP153E,
+            Kind::MiraBoxHSV293S => PID_MIRABOX_HSV293S,
         }
     }
 
@@ -136,6 +143,7 @@ impl Kind {
             Kind::Plus => ELGATO_VENDOR_ID,
             Kind::Akp153 => AJAZZ_VENDOR_ID_1,
             Kind::Akp153E => AJAZZ_VENDOR_ID_2,
+            Kind::MiraBoxHSV293S => AJAZZ_VENDOR_ID_1,
         }
     }
 
@@ -147,7 +155,7 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 32,
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 8,
-            Kind::Akp153 | Kind::Akp153E => 15 + 3,
+            Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => 15 + 3,
         }
     }
 
@@ -160,6 +168,7 @@ impl Kind {
             Kind::Pedal => 1,
             Kind::Neo | Kind::Plus => 2,
             Kind::Akp153 | Kind::Akp153E => 3,
+            Kind::MiraBoxHSV293S => 3,
         }
     }
 
@@ -171,8 +180,7 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 8,
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 4,
-            Kind::Akp153 => 6,
-            Kind::Akp153E => 6,
+            Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => 6,
         }
     }
 
@@ -197,7 +205,7 @@ impl Kind {
         match self {
             Kind::Plus => Some((800, 100)),
             Kind::Neo => Some((248, 58)),
-            Kind::Akp153 | Kind::Akp153E => Some((854, 480)), // logo
+            Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => Some((854, 480)), // logo
             _ => None,
         }
     }
@@ -255,15 +263,16 @@ impl Kind {
 
             Kind::Pedal => ImageFormat::default(),
 
-            Kind::Akp153 | Kind::Akp153E => ImageFormat {
+            Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (85, 85),
                 rotation: ImageRotation::Rot90,
                 mirror: ImageMirroring::Both,
             },
+
         }
     }
-    
+
     /// Image format used by LCD screen, used for filling LCD
     pub fn lcd_image_format(&self) -> Option<ImageFormat> {
         match self {
