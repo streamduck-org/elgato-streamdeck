@@ -174,6 +174,12 @@ impl AsyncStreamDeck {
         Ok(block_in_place(move || device.sleep())?)
     }
 
+    /// Make periodic events to the device, to keep it alive
+    pub async fn keep_alive(&self) -> Result<(), StreamDeckError> {
+        let device = self.device.lock().await;
+        Ok(block_in_place(move || device.keep_alive())?)
+    }
+
     /// Shutdown the device
     pub async fn shutdown(&self) -> Result<(), StreamDeckError> {
         let device = self.device.lock().await;
@@ -216,7 +222,7 @@ impl AsyncDeviceStateReader {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
                     match self.device.kind {
-                        Kind::Akp153 | Kind::Akp153E => {
+                        Kind::Akp153 | Kind::Akp153E | Kind::Akp815 => {
                             if *their {
                                 updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                 updates.push(DeviceStateUpdate::ButtonUp(index as u8));
