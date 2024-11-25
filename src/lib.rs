@@ -22,7 +22,7 @@ use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use image::{DynamicImage, ImageError};
 
 use crate::info::{is_vendor_familiar, Kind};
-use crate::util::{ajazz153_to_elgato_input, elgato153_to_ajazz, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data};
+use crate::util::{ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data};
 
 /// Various information about Stream Deck devices
 pub mod info;
@@ -361,7 +361,7 @@ impl StreamDeck {
         let key = if let Kind::Original = self.kind {
             flip_key_index(&self.kind, key)
         } else if let Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S = self.kind {
-            elgato_to_ajazz(&self.kind, key)
+            elgato_to_ajazz153(&self.kind, key)
         } else if let Kind::Akp815 = self.kind {
             inverse_key_index(&self.kind, key)
         } else {
@@ -584,7 +584,7 @@ impl StreamDeck {
                 let key = if self.kind == Kind::Akp815 {
                     inverse_key_index(&self.kind, key)
                 } else {
-                    elgato_to_ajazz(&self.kind, key)
+                    elgato_to_ajazz153(&self.kind, key)
                 };
 
                 let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
