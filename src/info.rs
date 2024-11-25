@@ -22,19 +22,22 @@ pub const PID_STREAMDECK_PEDAL: u16 = 0x0086;
 /// Product ID of Stream Deck Plus
 pub const PID_STREAMDECK_PLUS: u16 = 0x0084;
 
-/// Vendor ID of Ajazz Stream Deck
+/// Vendor ID of Ajazz Desk Controller
 pub const AJAZZ_VENDOR_ID_1: u16 = 0x5548;
 
-/// Product ID of Ajazz Stream Deck AKP153
+/// Product ID of Ajazz AKP153 Desk Controller
 pub const PID_AJAZZ_AKP153: u16 = 0x6674;
 
 /// Product ID of the "FHOOU" (front label) and "MiraBox HSV293S" (rear label). Seems just like an AKP153.
 pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
 
+/// Product ID of Ajazz AKP815 Desk Controller
+pub const PID_AJAZZ_AKP815: u16 = 0x6672;
+
 /// Vendor ID of Ajazz Stream Deck AKP153E
 pub const AJAZZ_VENDOR_ID_2: u16 = 0x0300;
 
-/// Product ID of Ajazz Stream Deck AKP153E
+/// Product ID of Ajazz AKP153E Desk Controller
 pub const PID_AJAZZ_E_AKP153E: u16 = 0x1010;
 
 const RECOGNIZED_VENDORS: &'static [u16] = &[
@@ -72,10 +75,12 @@ pub enum Kind {
     Pedal,
     /// Stream Deck Plus
     Plus,
-    /// Ajazz Stream Deck AKP153
+    /// Ajazz AKP153 Desk Controller
     Akp153,
-    /// Ajazz Stream Deck AKP153E
+    /// Ajazz AKP153E Desk Controller
     Akp153E,
+    /// Ajazz Akl982 Desk Controller
+    Akp815,
     /// MiraBox HSV293S
     MiraBoxHSV293S,
 }
@@ -101,6 +106,7 @@ impl Kind {
             AJAZZ_VENDOR_ID_1 | AJAZZ_VENDOR_ID_2 => match pid {
                 PID_AJAZZ_AKP153 => Some(Kind::Akp153),
                 PID_AJAZZ_E_AKP153E => Some(Kind::Akp153E),
+                PID_AJAZZ_AKP815 => Some(Kind::Akp815),
                 PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
                 _ => None
             },
@@ -123,6 +129,7 @@ impl Kind {
             Kind::Pedal => PID_STREAMDECK_PEDAL,
             Kind::Plus => PID_STREAMDECK_PLUS,
             Kind::Akp153 => PID_AJAZZ_AKP153,
+            Kind::Akp815 => PID_AJAZZ_AKP815,
             Kind::Akp153E => PID_AJAZZ_E_AKP153E,
             Kind::MiraBoxHSV293S => PID_MIRABOX_HSV293S,
         }
@@ -142,6 +149,7 @@ impl Kind {
             Kind::Pedal => ELGATO_VENDOR_ID,
             Kind::Plus => ELGATO_VENDOR_ID,
             Kind::Akp153 => AJAZZ_VENDOR_ID_1,
+            Kind::Akp815 => AJAZZ_VENDOR_ID_1,
             Kind::Akp153E => AJAZZ_VENDOR_ID_2,
             Kind::MiraBoxHSV293S => AJAZZ_VENDOR_ID_1,
         }
@@ -156,6 +164,7 @@ impl Kind {
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 8,
             Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => 15 + 3,
+            Kind::Akp815 => 15,
         }
     }
 
@@ -167,8 +176,8 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 4,
             Kind::Pedal => 1,
             Kind::Neo | Kind::Plus => 2,
-            Kind::Akp153 | Kind::Akp153E => 3,
-            Kind::MiraBoxHSV293S => 3,
+            Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => 3,
+            Kind::Akp815 => 5,
         }
     }
 
@@ -181,6 +190,7 @@ impl Kind {
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 4,
             Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => 6,
+            Kind::Akp815 => 3,
         }
     }
 
@@ -205,7 +215,8 @@ impl Kind {
         match self {
             Kind::Plus => Some((800, 100)),
             Kind::Neo => Some((248, 58)),
-            Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => Some((854, 480)), // logo
+            Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => Some((854, 480)),
+            Kind::Akp815 => Some((800, 480)),
             _ => None,
         }
     }
@@ -270,6 +281,12 @@ impl Kind {
                 mirror: ImageMirroring::Both,
             },
 
+            Kind::Akp815 => ImageFormat {
+                mode: ImageMode::JPEG,
+                size: (100, 100),
+                rotation: ImageRotation::Rot180,
+                mirror: ImageMirroring::None,
+            },
         }
     }
 

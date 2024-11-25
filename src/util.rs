@@ -65,14 +65,6 @@ pub fn extract_str(bytes: &[u8]) -> Result<String, Utf8Error> {
 }
 
 /*
- Ajazz's key index
- -----------------------------
-| 0d | 0a | 07 | 04 | 01 | 10 |
-|----|----|----|----|----|----|
-| 0e | 0b | 08 | 05 | 02 | 11 |
-|----|----|----|----|----|----|
-| 0f | 0c | 09 | 06 | 03 | 12 |
- -----------------------------
  Elgato's key index
  -----------------------------
 | 01 | 02 | 03 | 04 | 05 | 06 |
@@ -81,30 +73,62 @@ pub fn extract_str(bytes: &[u8]) -> Result<String, Utf8Error> {
 |----|----|----|----|----|----|
 | 13 | 14 | 15 | 16 | 17 | 18 |
  -----------------------------
+
+ Ajazz's AKP153(E) key index
+ -----------------------------
+| 0d | 0a | 07 | 04 | 01 | 10 |
+|----|----|----|----|----|----|
+| 0e | 0b | 08 | 05 | 02 | 11 |
+|----|----|----|----|----|----|
+| 0f | 0c | 09 | 06 | 03 | 12 |
+ -----------------------------
+
+ Ajazz's AKP815 key index
+  --------------
+ | 0f | 0e | 0d |
+ |----|----|----|
+ | 0c | 0b | 0a |
+ |----|----|----|
+ | 09 | 08 | 07 |
+ |----|----|----|
+ | 06 | 05 | 04 |
+ |----|----|----|
+ | 03 | 02 | 01 |
+  --------------
+
 */
 
 /// Converts Elgato key index to Ajazz key index
-pub fn elgato_to_ajazz(kind: &Kind, key: u8) -> u8 {
+pub fn elgato153_to_ajazz(kind: &Kind, key: u8) -> u8 {
     if key < kind.key_count() {
-        return [12, 9, 6, 3, 0, 15, 13, 10, 7, 4, 1, 16, 14, 11, 8, 5, 2, 17][key as usize];
+        [12, 9, 6, 3, 0, 15, 13, 10, 7, 4, 1, 16, 14, 11, 8, 5, 2, 17][key as usize]
     } else {
-        return key;
+        key
     }
 }
 
 /// Converts Ajazz key index to Elgato key index
-pub fn ajazz_to_elgato_input(kind: &Kind, key: u8) -> u8 {
+pub fn ajazz153_to_elgato_input(kind: &Kind, key: u8) -> u8 {
     if key < kind.key_count() {
-        return [4, 10, 16, 3, 9, 15, 2, 8, 14, 1, 7, 13, 0, 6, 12, 5, 11, 17][key as usize];
+        [4, 10, 16, 3, 9, 15, 2, 8, 14, 1, 7, 13, 0, 6, 12, 5, 11, 17][key as usize]
     } else {
-        return key;
+        key
+    }
+}
+
+/// Make last key index first, and first key index last
+pub fn inverse_key_index(kind: &Kind, key: u8) -> u8 {
+    if key < kind.key_count() {
+        kind.key_count() - 1 - key
+    } else {
+        key
     }
 }
 
 /// Flips key index horizontally, for use with Original v1 Stream Deck
 pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
     let col = key % kind.column_count();
-    return (key - col) + ((kind.column_count() - 1) - col);
+    (key - col) + ((kind.column_count() - 1) - col)
 }
 
 /// Reads button states, empty vector if no data
@@ -114,7 +138,7 @@ pub fn read_button_states(kind: &Kind, states: &Vec<u8>) -> Vec<bool> {
     }
 
     match kind {
-        Kind::Akp153 | Kind::Akp153E | Kind::MiraBoxHSV293S => {
+        Kind::Akp153 | Kind::Akp153E | Kind::Akp815 | Kind::MiraBoxHSV293S => {
             let mut bools = vec![];
 
             for i in 0..kind.key_count() {

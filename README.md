@@ -1,5 +1,5 @@
 # elgato-streamdeck
-Library for interacting with Elgato Stream Decks through [hidapi](https://crates.io/crates/hidapi). 
+Library for interacting with Elgato Stream Decks through [hidapi](https://crates.io/crates/hidapi).
 Heavily based on [python-elgato-streamdeck](https://github.com/abcminiuser/python-elgato-streamdeck) and partially on
 [streamdeck library for rust](https://github.com/ryankurte/rust-streamdeck).
 
@@ -19,7 +19,7 @@ sudo udevadm control --reload-rules
 ```
 Unplugging and plugging back in the device should also help
 
-You should also create group called "plugdev" and add yourself to it, so you get access to the devices. 
+You should also create group called "plugdev" and add yourself to it, so you get access to the devices.
 You also need to restart the user session to let user group changes to kick in
 
 ## Example
@@ -62,7 +62,7 @@ if device.updated {
 
 
 ## Supported Devices
-Support of the devices is the same as from libraries above, I personally tested Original v2 and Plus. 
+Support of the devices is the same as from libraries above, I personally tested Original v2 and Plus.
 I'll just keep updating this library to match upstream libraries.
 
 But as it stands, this library should support following devices:
@@ -79,3 +79,4 @@ But as it stands, this library should support following devices:
 - Ajazz AKP153 (thanks to [@ZCube](https://github.com/ZCube))
 - Ajazz AKP153E (thanks to [@teras](https://github.com/teras))
 - MiraBox HSV293S (thanks to [@czyz](https://github.com/czyz))
+- Ajazz AKP815 (thanks to [@teras](https://github.com/teras))
