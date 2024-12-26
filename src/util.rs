@@ -99,7 +99,7 @@ pub fn extract_str(bytes: &[u8]) -> Result<String, Utf8Error> {
 */
 
 /// Converts Elgato key index to Ajazz key index
-pub fn elgato153_to_ajazz(kind: &Kind, key: u8) -> u8 {
+pub fn elgato_to_ajazz153(kind: &Kind, key: u8) -> u8 {
     if key < kind.key_count() {
         [12, 9, 6, 3, 0, 15, 13, 10, 7, 4, 1, 16, 14, 11, 8, 5, 2, 17][key as usize]
     } else {
@@ -138,7 +138,7 @@ pub fn read_button_states(kind: &Kind, states: &Vec<u8>) -> Vec<bool> {
     }
 
     match kind {
-        Kind::Akp153 | Kind::Akp153E | Kind::Akp815 => {
+        Kind::Akp153 | Kind::Akp153E | Kind::Akp815 | Kind::MiraBoxHSV293S => {
             let mut bools = vec![];
 
             for i in 0..kind.key_count() {
