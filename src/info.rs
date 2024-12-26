@@ -34,23 +34,18 @@ pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
 /// Product ID of Ajazz AKP815 Desk Controller
 pub const PID_AJAZZ_AKP815: u16 = 0x6672;
 
-/// Vendor ID of Ajazz Stream Deck AKP153E
+/// Vendor ID of Ajazz AKP153E Desk Controller
 pub const AJAZZ_VENDOR_ID_2: u16 = 0x0300;
 
 /// Product ID of Ajazz AKP153E Desk Controller
 pub const PID_AJAZZ_E_AKP153E: u16 = 0x1010;
 
-const RECOGNIZED_VENDORS: &'static [u16] = &[
-    ELGATO_VENDOR_ID,
-    AJAZZ_VENDOR_ID_1,
-    AJAZZ_VENDOR_ID_2
-];
+const RECOGNIZED_VENDORS: &'static [u16] = &[ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID_1, AJAZZ_VENDOR_ID_2];
 
 /// Returns true for vendors IDs that are recognized by the library
 pub fn is_vendor_familiar(vendor: &u16) -> bool {
     RECOGNIZED_VENDORS.contains(vendor)
 }
-
 
 /// Enum describing kinds of Stream Decks out there
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
@@ -79,7 +74,7 @@ pub enum Kind {
     Akp153,
     /// Ajazz AKP153E Desk Controller
     Akp153E,
-    /// Ajazz Akl982 Desk Controller
+    /// Ajazz AKP815 Desk Controller
     Akp815,
     /// MiraBox HSV293S
     MiraBoxHSV293S,
@@ -100,7 +95,7 @@ impl Kind {
                 PID_STREAMDECK_NEO => Some(Kind::Neo),
                 PID_STREAMDECK_PEDAL => Some(Kind::Pedal),
                 PID_STREAMDECK_PLUS => Some(Kind::Plus),
-                _ => None
+                _ => None,
             },
 
             AJAZZ_VENDOR_ID_1 | AJAZZ_VENDOR_ID_2 => match pid {
@@ -108,10 +103,10 @@ impl Kind {
                 PID_AJAZZ_E_AKP153E => Some(Kind::Akp153E),
                 PID_AJAZZ_AKP815 => Some(Kind::Akp815),
                 PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
-                _ => None
+                _ => None,
             },
 
-            _ => None
+            _ => None,
         }
     }
 
@@ -305,7 +300,7 @@ impl Kind {
                 rotation: ImageRotation::Rot0,
                 mirror: ImageMirroring::None,
             }),
-            _ => None
+            _ => None,
         }
     }
 

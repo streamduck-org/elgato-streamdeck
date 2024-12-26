@@ -22,7 +22,10 @@ use hidapi::{HidApi, HidDevice, HidError, HidResult};
 use image::{DynamicImage, ImageError};
 
 use crate::info::{is_vendor_familiar, Kind};
-use crate::util::{ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data};
+use crate::util::{
+    ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data, read_encoder_input, read_lcd_input,
+    send_feature_report, write_data,
+};
 
 /// Various information about Stream Deck devices
 pub mod info;
@@ -132,7 +135,12 @@ impl StreamDeck {
     pub fn connect(hidapi: &HidApi, kind: Kind, serial: &str) -> Result<StreamDeck, StreamDeckError> {
         let device = hidapi.open_serial(kind.vendor_id(), kind.product_id(), serial)?;
 
-        Ok(StreamDeck { kind, device, image_cache: RwLock::new(vec![]), initialized: false.into() })
+        Ok(StreamDeck {
+            kind,
+            device,
+            image_cache: RwLock::new(vec![]),
+            initialized: false.into(),
+        })
     }
 }
 
@@ -184,7 +192,8 @@ impl StreamDeck {
                 let bytes = get_feature_report(&self.device, 0x06, 32)?;
                 Ok(extract_str(&bytes[2..])?)
             }
-        }.map(|s| s.replace('\u{0001}', ""))
+        }
+        .map(|s| s.replace('\u{0001}', ""))
     }
 
     /// Returns firmware version of the StreamDeck
@@ -224,8 +233,7 @@ impl StreamDeck {
                 write_data(&self.device, buf.as_slice())?;
             }
 
-            _ => {
-            }
+            _ => {}
         }
         Ok(())
     }
@@ -401,60 +409,24 @@ impl StreamDeck {
         self.write_image_data_reports(
             image_data,
             WriteImageParameters::for_key(self.kind, image_data.len()),
-            |page_number, this_length, last_package| {
-                match self.kind {
-                    Kind::Original => vec![
-                        0x02,
-                        0x01,
-                        (page_number + 1) as u8,
-                        0,
-                        if last_package { 1 } else { 0 },
-                        key + 1,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                    ],
+            |page_number, this_length, last_package| match self.kind {
+                Kind::Original => vec![0x02, 0x01, (page_number + 1) as u8, 0, if last_package { 1 } else { 0 }, key + 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 
-                    Kind::Mini | Kind::MiniMk2 => vec![
-                        0x02,
-                        0x01,
-                        page_number as u8,
-                        0,
-                        if last_package { 1 } else { 0 },
-                        key + 1,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                    ],
+                Kind::Mini | Kind::MiniMk2 => vec![0x02, 0x01, page_number as u8, 0, if last_package { 1 } else { 0 }, key + 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 
-                    Kind::Akp153 | Kind::Akp153E | Kind::Akp815 | Kind::MiraBoxHSV293S => vec![],
+                Kind::Akp153 | Kind::Akp153E | Kind::Akp815 | Kind::MiraBoxHSV293S => vec![],
 
-                    _ => vec![
-                        0x02,
-                        0x07,
-                        key,
-                        if last_package { 1 } else { 0 },
-                        (this_length & 0xff) as u8,
-                        (this_length >> 8) as u8,
-                        (page_number & 0xff) as u8,
-                        (page_number >> 8) as u8,
-                    ],
-                }
-            }
+                _ => vec![
+                    0x02,
+                    0x07,
+                    key,
+                    if last_package { 1 } else { 0 },
+                    (this_length & 0xff) as u8,
+                    (this_length >> 8) as u8,
+                    (page_number & 0xff) as u8,
+                    (page_number >> 8) as u8,
+                ],
+            },
         )?;
         Ok(())
     }
@@ -478,9 +450,7 @@ impl StreamDeck {
         self.initialize()?;
         match self.kind {
             Kind::Plus => (),
-            _ => {
-                return Err(StreamDeckError::UnsupportedOperation)
-            }
+            _ => return Err(StreamDeckError::UnsupportedOperation),
         }
 
         self.write_image_data_reports(
@@ -489,24 +459,26 @@ impl StreamDeck {
                 image_report_length: 1024,
                 image_report_payload_length: 1024 - 16,
             },
-            |page_number, this_length, last_package| vec![
-                0x02,
-                0x0c,
-                (x & 0xff) as u8,
-                (x >> 8) as u8,
-                (y & 0xff) as u8,
-                (y >> 8) as u8,
-                (rect.w & 0xff) as u8,
-                (rect.w >> 8) as u8,
-                (rect.h & 0xff) as u8,
-                (rect.h >> 8) as u8,
-                if last_package { 1 } else { 0 },
-                (page_number & 0xff) as u8,
-                (page_number >> 8) as u8,
-                (this_length & 0xff) as u8,
-                (this_length >> 8) as u8,
-                0,
-            ]
+            |page_number, this_length, last_package| {
+                vec![
+                    0x02,
+                    0x0c,
+                    (x & 0xff) as u8,
+                    (x >> 8) as u8,
+                    (y & 0xff) as u8,
+                    (y >> 8) as u8,
+                    (rect.w & 0xff) as u8,
+                    (rect.w >> 8) as u8,
+                    (rect.h & 0xff) as u8,
+                    (rect.h >> 8) as u8,
+                    if last_package { 1 } else { 0 },
+                    (page_number & 0xff) as u8,
+                    (page_number >> 8) as u8,
+                    (this_length & 0xff) as u8,
+                    (this_length >> 8) as u8,
+                    0,
+                ]
+            },
         )
     }
 
@@ -521,14 +493,14 @@ impl StreamDeck {
     pub fn write_lcd_fill(&self, image_data: &[u8]) -> Result<(), StreamDeckError> {
         self.initialize()?;
         match self.kind {
-            Kind::Neo => {
-                self.write_image_data_reports(
-                    image_data,
-                    WriteImageParameters {
-                        image_report_length: 1024,
-                        image_report_payload_length: 1024 - 8
-                    },
-                    |page_number, this_length, last_package| vec![
+            Kind::Neo => self.write_image_data_reports(
+                image_data,
+                WriteImageParameters {
+                    image_report_length: 1024,
+                    image_report_payload_length: 1024 - 8,
+                },
+                |page_number, this_length, last_package| {
+                    vec![
                         0x02,
                         0x0b,
                         0,
@@ -538,8 +510,8 @@ impl StreamDeck {
                         (page_number & 0xff) as u8,
                         (page_number >> 8) as u8,
                     ]
-                )
-            }
+                },
+            ),
 
             Kind::Plus => {
                 let (w, h) = self.kind.lcd_strip_size().unwrap();
@@ -550,28 +522,30 @@ impl StreamDeck {
                         image_report_length: 1024,
                         image_report_payload_length: 1024 - 16,
                     },
-                    |page_number, this_length, last_package| vec![
-                        0x02,
-                        0x0c,
-                        0,
-                        0,
-                        0,
-                        0,
-                        (w & 0xff) as u8,
-                        (w >> 8) as u8,
-                        (h & 0xff) as u8,
-                        (h >> 8) as u8,
-                        if last_package { 1 } else { 0 },
-                        (page_number & 0xff) as u8,
-                        (page_number >> 8) as u8,
-                        (this_length & 0xff) as u8,
-                        (this_length >> 8) as u8,
-                        0,
-                    ]
+                    |page_number, this_length, last_package| {
+                        vec![
+                            0x02,
+                            0x0c,
+                            0,
+                            0,
+                            0,
+                            0,
+                            (w & 0xff) as u8,
+                            (w >> 8) as u8,
+                            (h & 0xff) as u8,
+                            (h >> 8) as u8,
+                            if last_package { 1 } else { 0 },
+                            (page_number & 0xff) as u8,
+                            (page_number >> 8) as u8,
+                            (this_length & 0xff) as u8,
+                            (this_length >> 8) as u8,
+                            0,
+                        ]
+                    },
                 )
             }
 
-            _ => Err(StreamDeckError::UnsupportedOperation)
+            _ => Err(StreamDeckError::UnsupportedOperation),
         }
     }
 
@@ -605,15 +579,13 @@ impl StreamDeck {
     pub fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
         self.initialize()?;
         match self.kind {
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp815 | Kind::MiraBoxHSV293S => {
-                self.clear_button_image(0xff)
-            }
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp815 | Kind::MiraBoxHSV293S => self.clear_button_image(0xff),
             _ => {
                 for i in 0..self.kind.key_count() {
                     self.clear_button_image(i)?
                 }
                 Ok(())
-            },
+            }
         }
     }
 
@@ -630,9 +602,7 @@ impl StreamDeck {
         self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E | Kind::Akp815 | Kind::MiraBoxHSV293S => (),
-            _ => {
-                return Err(StreamDeckError::UnsupportedOperation)
-            }
+            _ => return Err(StreamDeckError::UnsupportedOperation),
         }
 
         if self.kind.lcd_strip_size().is_none() {
@@ -854,14 +824,9 @@ impl StreamDeck {
         })
     }
 
-    fn write_image_data_reports<T>(
-        &self,
-        image_data: &[u8],
-        parameters: WriteImageParameters,
-        header_fn: T
-    ) -> Result<(), StreamDeckError>
+    fn write_image_data_reports<T>(&self, image_data: &[u8], parameters: WriteImageParameters, header_fn: T) -> Result<(), StreamDeckError>
     where
-        T: Fn(usize, usize, bool) -> Vec<u8>
+        T: Fn(usize, usize, bool) -> Vec<u8>,
     {
         let image_report_length = parameters.image_report_length;
         let image_report_payload_length = parameters.image_report_payload_length;
@@ -894,7 +859,7 @@ impl StreamDeck {
 #[derive(Clone, Copy)]
 struct WriteImageParameters {
     pub image_report_length: usize,
-    pub image_report_payload_length: usize
+    pub image_report_payload_length: usize,
 }
 
 impl WriteImageParameters {
@@ -918,7 +883,7 @@ impl WriteImageParameters {
 
         Self {
             image_report_length,
-            image_report_payload_length
+            image_report_payload_length,
         }
     }
 }
