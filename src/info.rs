@@ -38,7 +38,7 @@ pub const PID_AJAZZ_AKP815: u16 = 0x6672;
 pub const AJAZZ_VENDOR_ID_2: u16 = 0x0300;
 
 /// Product ID of Ajazz AKP153E Desk Controller
-pub const PID_AJAZZ_E_AKP153E: u16 = 0x1010;
+pub const PID_AJAZZ_AKP153E: u16 = 0x1010;
 
 /// Product ID of Ajazz AKP153R Desk Controller
 pub const PID_AJAZZ_AKP153R: u16 = 0x1020;
@@ -105,7 +105,7 @@ impl Kind {
 
             AJAZZ_VENDOR_ID_1 | AJAZZ_VENDOR_ID_2 => match pid {
                 PID_AJAZZ_AKP153 => Some(Kind::Akp153),
-                PID_AJAZZ_E_AKP153E => Some(Kind::Akp153E),
+                PID_AJAZZ_AKP153E => Some(Kind::Akp153E),
                 PID_AJAZZ_AKP153R => Some(Kind::Akp153R),
                 PID_AJAZZ_AKP815 => Some(Kind::Akp815),
                 PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
@@ -131,7 +131,7 @@ impl Kind {
             Kind::Plus => PID_STREAMDECK_PLUS,
             Kind::Akp153 => PID_AJAZZ_AKP153,
             Kind::Akp815 => PID_AJAZZ_AKP815,
-            Kind::Akp153E => PID_AJAZZ_E_AKP153E,
+            Kind::Akp153E => PID_AJAZZ_AKP153E,
             Kind::Akp153R => PID_AJAZZ_AKP153R,
             Kind::MiraBoxHSV293S => PID_MIRABOX_HSV293S,
         }
