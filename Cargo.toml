@@ -10,7 +10,7 @@ repository = "https://github.com/streamduck-org/elgato-streamdeck"
 license = "MPL-2.0"
 
 [dependencies]
-hidapi = { version = "2.6", default-features = false }
+hidapi = "2.6"
 image = { version = "0.25.4", default-features = false, features = [
   "bmp",
   "jpeg",
@@ -23,12 +23,6 @@ async = [
   "tokio/sync",
   "tokio/rt-multi-thread",
   "tokio/time"
-]
-default-hidapi-backends = [
-  "hidapi/windows-native",
-  "hidapi/macos-shared-device",
-  "hidapi/linux-static-hidraw",
-  "hidapi/illumos-static-libusb"
 ]
 
 [package.metadata.docs.rs]

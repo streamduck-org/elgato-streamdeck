@@ -3,7 +3,6 @@ name = "simple"
 edition = "2021"
 
 [dependencies]
-hidapi = { version = "2.6", default-features = true }
 image = { version = "0.25.1", default-features = false, features = [
   "bmp",
   "jpeg",
