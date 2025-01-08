@@ -1,29 +1,31 @@
 # elgato-streamdeck
-Library for interacting with Elgato Stream Decks through [hidapi](https://crates.io/crates/hidapi).
+Rust library for interacting with Elgato Stream Deck and other stream controller hardware.
 Heavily based on [python-elgato-streamdeck](https://github.com/abcminiuser/python-elgato-streamdeck) and partially on
 [streamdeck library for rust](https://github.com/ryankurte/rust-streamdeck).
 
 This library was made as a better designed alternative to streamdeck library for Rust.
-I just took code from both of the libraries and made it more so pleasant to use.
+I just took code from both of the libraries and made it more pleasant to use.
 
 ## udev rules for Linux
-If you're using systemd on your system, you might have to install udev rules to allow connecting to Stream Decks from userspace.
+If you're using systemd on your system, you might have to install udev rules to allow connecting to devices from userspace.
 
-You can do that by using following command to copy included into repo `40-streamdeck.rules` file into `udev/rules.d/`
+You can do that by using the following command to copy this repo's included `40-streamdeck.rules` file into `udev/rules.d/`:
 ```shell
 cp 40-streamdeck.rules /etc/udev/rules.d/
 ```
-And then reloading udev rules
+And then reloading udev rules:
 ```shell
 sudo udevadm control --reload-rules
 ```
-Unplugging and plugging back in the device should also help
+Unplugging and plugging back in the device should also help.
 
-You should also create group called "plugdev" and add yourself to it, so you get access to the devices.
-You also need to restart the user session to let user group changes to kick in
+You should also create a group called "plugdev" if it doesn't exist and add yourself to it, so you get access to the devices.
+You also need to restart the user session to let user group changes to kick in.
 
 ## Example
 ```rust
+use elgato_streamdeck::{new_hidapi, StreamDeck};
+
 // Create instance of HidApi
 let hid = new_hidapi();
 
@@ -45,7 +47,7 @@ println!(
 device.set_brightness(35).unwrap();
 
 // Use image-rs to load an image
-let image = open("no-place-like-localhost.jpg").unwrap();
+let image = image::open("no-place-like-localhost.jpg").unwrap();
 
 // Write it to the device
 device.set_button_image(7, image).unwrap();
@@ -60,12 +62,8 @@ if device.updated {
 - [x] Convenient to use API for looking up devices, connecting to them and interacting with them
 - [x] Reading buttons with async
 
-
 ## Supported Devices
-Support of the devices is the same as from libraries above, I personally tested Original v2 and Plus.
-I'll just keep updating this library to match upstream libraries.
-
-But as it stands, this library should support following devices:
+As it stands, this library should support the following devices:
 - Stream Deck Original
 - Stream Deck Original V2
 - Stream Deck XL
