@@ -104,11 +104,7 @@ pub enum StreamDeckInput {
 impl StreamDeckInput {
     /// Checks if there's data received or not
     pub fn is_empty(&self) -> bool {
-        if let StreamDeckInput::NoData = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, StreamDeckInput::NoData)
     }
 }
 
@@ -261,9 +257,7 @@ impl StreamDeck {
             }
 
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
-                let data = match self.kind {
-                    _ => read_data(&self.device, 512, timeout),
-                }?;
+                let data = read_data(&self.device, 512, timeout)?;
 
                 if data[0] == 0 {
                     return Ok(StreamDeckInput::NoData);
@@ -312,10 +306,11 @@ impl StreamDeck {
                 Ok(send_feature_report(&self.device, buf.as_slice())?)
             }
 
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => Ok({
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
                 self.set_brightness(100)?;
                 self.clear_button_image(0xff)?;
-            }),
+                Ok(())
+            },
 
             _ => {
                 let mut buf = vec![0x03, 0x02];
@@ -330,7 +325,7 @@ impl StreamDeck {
     /// Sets brightness of the device, value range is 0 - 100
     pub fn set_brightness(&self, percent: u8) -> Result<(), StreamDeckError> {
         self.initialize()?;
-        let percent = percent.max(0).min(100);
+        let percent = percent.clamp(0, 100);
 
         match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => {
@@ -594,7 +589,8 @@ impl StreamDeck {
     pub fn set_button_image(&self, key: u8, image: DynamicImage) -> Result<(), StreamDeckError> {
         self.initialize()?;
         let image_data = convert_image(self.kind, image)?;
-        Ok(self.write_image(key, &image_data)?)
+        self.write_image(key, &image_data)?;
+        Ok(())
     }
 
     /// Set logo image
@@ -815,6 +811,7 @@ impl StreamDeck {
 
     /// Returns button state reader for this device
     pub fn get_reader(self: &Arc<Self>) -> Arc<DeviceStateReader> {
+        #[allow(clippy::arc_with_non_send_sync)]
         Arc::new(DeviceStateReader {
             device: self.clone(),
             states: Mutex::new(DeviceState {
@@ -1032,19 +1029,18 @@ impl DeviceStateReader {
                             }
                         }
                         _ => {
-                            if *their != *mine {
-                                if index < self.device.kind.key_count() as usize {
+                            if their != mine {
+                                let key_count = self.device.kind.key_count();
+                                if index < key_count as usize {
                                     if *their {
                                         updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                     } else {
                                         updates.push(DeviceStateUpdate::ButtonUp(index as u8));
                                     }
+                                } else if *their {
+                                    updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - key_count));
                                 } else {
-                                    if *their {
-                                        updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - self.device.kind.key_count()));
-                                    } else {
-                                        updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - self.device.kind.key_count()));
-                                    }
+                                    updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - key_count));
                                 }
                             }
                         }

@@ -18,7 +18,7 @@ pub fn get_feature_report(device: &HidDevice, report_id: u8, length: usize) -> R
 
 /// Performs send_feature_report on [HidDevice]
 pub fn send_feature_report(device: &HidDevice, payload: &[u8]) -> Result<(), HidError> {
-    Ok(device.send_feature_report(payload)?)
+    device.send_feature_report(payload)
 }
 
 /// Reads data from [HidDevice]. Blocking mode is used if timeout is specified
@@ -37,25 +37,13 @@ pub fn read_data(device: &HidDevice, length: usize, timeout: Option<Duration>) -
 
 /// Writes data to [HidDevice]
 pub fn write_data(device: &HidDevice, payload: &[u8]) -> Result<usize, HidError> {
-    #[cfg(target_os = "windows")]
-    let platform = "windows";
-    #[cfg(target_os = "macos")]
-    let platform = "mac";
-    #[cfg(target_os = "linux")]
-    let platform = "linux";
-
-    match platform {
-        "windows" => Ok(device.write(payload)?),
-        _ => {
-            if payload[0] == 0 {
-                let mut buf = vec![0u8; payload.len() + 1];
-                buf[0] = 0;
-                buf[1..].copy_from_slice(payload);
-                return Ok(device.write(buf.as_slice())?);
-            } else {
-                Ok(device.write(payload)?)
-            }
-        }
+    if cfg!(windows) || payload[0] != 0 {
+        device.write(payload)
+    } else {
+        let mut buf = vec![0u8; payload.len() + 1];
+        buf[0] = 0;
+        buf[1..].copy_from_slice(payload);
+        device.write(buf.as_slice())
     }
 }
 
@@ -132,7 +120,7 @@ pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
 }
 
 /// Reads button states, empty vector if no data
-pub fn read_button_states(kind: &Kind, states: &Vec<u8>) -> Vec<bool> {
+pub fn read_button_states(kind: &Kind, states: &[u8]) -> Vec<bool> {
     if states[0] == 0 {
         return vec![];
     }
@@ -167,7 +155,7 @@ pub fn read_button_states(kind: &Kind, states: &Vec<u8>) -> Vec<bool> {
 }
 
 /// Reads lcd screen input
-pub fn read_lcd_input(data: &Vec<u8>) -> Result<StreamDeckInput, StreamDeckError> {
+pub fn read_lcd_input(data: &[u8]) -> Result<StreamDeckInput, StreamDeckError> {
     let start_x = u16::from_le_bytes([data[6], data[7]]);
     let start_y = u16::from_le_bytes([data[8], data[9]]);
 
@@ -187,7 +175,7 @@ pub fn read_lcd_input(data: &Vec<u8>) -> Result<StreamDeckInput, StreamDeckError
 }
 
 /// Reads encoder input
-pub fn read_encoder_input(kind: &Kind, data: &Vec<u8>) -> Result<StreamDeckInput, StreamDeckError> {
+pub fn read_encoder_input(kind: &Kind, data: &[u8]) -> Result<StreamDeckInput, StreamDeckError> {
     match &data[4] {
         0x0 => Ok(StreamDeckInput::EncoderStateChange(data[5..5 + kind.encoder_count() as usize].iter().map(|s| *s != 0).collect())),
 

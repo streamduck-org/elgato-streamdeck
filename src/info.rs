@@ -43,7 +43,7 @@ pub const PID_AJAZZ_AKP153E: u16 = 0x1010;
 /// Product ID of Ajazz AKP153R Desk Controller
 pub const PID_AJAZZ_AKP153R: u16 = 0x1020;
 
-const RECOGNIZED_VENDORS: &'static [u16] = &[ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID_1, AJAZZ_VENDOR_ID_2];
+const RECOGNIZED_VENDORS: [u16; 3] = [ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID_1, AJAZZ_VENDOR_ID_2];
 
 /// Returns true for vendors IDs that are recognized by the library
 pub fn is_vendor_familiar(vendor: &u16) -> bool {
@@ -226,10 +226,7 @@ impl Kind {
 
     /// Tells if the Stream Deck kind has a screen
     pub fn is_visual(&self) -> bool {
-        match self {
-            Kind::Pedal => false,
-            _ => true,
-        }
+        !matches!(self, Kind::Pedal)
     }
 
     /// Key layout of the Stream Deck kind as (rows, columns)
