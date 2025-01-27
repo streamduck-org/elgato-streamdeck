@@ -310,7 +310,7 @@ impl StreamDeck {
                 self.set_brightness(100)?;
                 self.clear_button_image(0xff)?;
                 Ok(())
-            },
+            }
 
             _ => {
                 let mut buf = vec![0x03, 0x02];
@@ -695,9 +695,6 @@ impl StreamDeck {
             let this_length = bytes_remaining.min(image_report_payload_length);
             let bytes_sent = page_number * image_report_payload_length;
 
-            /* TODO: Should this be hardcoded, since it is only for the chinese devices
-                    or should this be done differently?
-            */
             // Create buffer with Report ID as first byte
             let mut buf: Vec<u8> = vec![0x00];
 
