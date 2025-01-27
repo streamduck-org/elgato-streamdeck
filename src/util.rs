@@ -37,14 +37,7 @@ pub fn read_data(device: &HidDevice, length: usize, timeout: Option<Duration>) -
 
 /// Writes data to [HidDevice]
 pub fn write_data(device: &HidDevice, payload: &[u8]) -> Result<usize, HidError> {
-    if cfg!(windows) || payload[0] != 0 {
-        device.write(payload)
-    } else {
-        let mut buf = vec![0u8; payload.len() + 1];
-        buf[0] = 0;
-        buf[1..].copy_from_slice(payload);
-        device.write(buf.as_slice())
-    }
+    device.write(payload)
 }
 
 /// Extracts string from byte array, removing \0 symbols

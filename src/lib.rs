@@ -220,12 +220,12 @@ impl StreamDeck {
         self.initialized.store(true, Ordering::Release);
         match self.kind {
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x44, 0x49, 0x53];
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x44, 0x49, 0x53];
+                buf.extend(vec![0u8; 513 - buf.len()]);
                 write_data(&self.device, buf.as_slice())?;
 
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, 0x00, 0x00];
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, 0x00, 0x00];
+                buf.extend(vec![0u8; 513 - buf.len()]);
                 write_data(&self.device, buf.as_slice())?;
             }
 
@@ -310,7 +310,7 @@ impl StreamDeck {
                 self.set_brightness(100)?;
                 self.clear_button_image(0xff)?;
                 Ok(())
-            },
+            }
 
             _ => {
                 let mut buf = vec![0x03, 0x02];
@@ -337,9 +337,9 @@ impl StreamDeck {
             }
 
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, percent];
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, percent];
 
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                buf.extend(vec![0u8; 513 - buf.len()]);
 
                 write_data(&self.device, buf.as_slice())?;
 
@@ -378,6 +378,7 @@ impl StreamDeck {
         match self.kind {
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
                 let mut buf = vec![
+                    0x00,
                     0x43,
                     0x52,
                     0x54,
@@ -393,7 +394,7 @@ impl StreamDeck {
                     key + 1,
                 ];
 
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                buf.extend(vec![0u8; 513 - buf.len()]);
 
                 write_data(&self.device, buf.as_slice())?;
             }
@@ -409,7 +410,7 @@ impl StreamDeck {
 
                 Kind::Mini | Kind::MiniMk2 => vec![0x02, 0x01, page_number as u8, 0, if last_package { 1 } else { 0 }, key + 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 
-                Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => vec![],
+                Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => vec![0x00],
 
                 _ => vec![
                     0x02,
@@ -556,9 +557,9 @@ impl StreamDeck {
                     elgato_to_ajazz153(&self.kind, key)
                 };
 
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
 
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                buf.extend(vec![0u8; 513 - buf.len()]);
 
                 write_data(&self.device, buf.as_slice())?;
 
@@ -605,9 +606,9 @@ impl StreamDeck {
             return Err(StreamDeckError::UnsupportedOperation);
         }
         // 854 * 480 * 3
-        let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x4f, 0x47, 0x00, 0x12, 0xc3, 0xc0, 0x01];
+        let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x4f, 0x47, 0x00, 0x12, 0xc3, 0xc0, 0x01];
 
-        buf.extend(vec![0u8; 512 - buf.len()]);
+        buf.extend(vec![0u8; 513 - buf.len()]);
 
         write_data(&self.device, buf.as_slice())?;
 
@@ -672,13 +673,13 @@ impl StreamDeck {
 
         let image_report_length = match self.kind {
             Kind::Original => 8191,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 512,
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 513,
             _ => 1024,
         };
 
         let image_report_header_length = match self.kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 0,
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 1,
             _ => 8,
         };
 
@@ -694,9 +695,10 @@ impl StreamDeck {
             let this_length = bytes_remaining.min(image_report_payload_length);
             let bytes_sent = page_number * image_report_payload_length;
 
-            // Selecting header based on device
-            let mut buf: Vec<u8> = vec![];
+            // Create buffer with Report ID as first byte
+            let mut buf: Vec<u8> = vec![0x00];
 
+            // Selecting header based on device
             buf.extend(&image_data[bytes_sent..bytes_sent + this_length]);
 
             // Adding padding
@@ -732,9 +734,9 @@ impl StreamDeck {
         self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4e];
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4e];
 
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                buf.extend(vec![0u8; 513 - buf.len()]);
 
                 write_data(&self.device, buf.as_slice())?;
 
@@ -750,8 +752,8 @@ impl StreamDeck {
         self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4F, 0x4E, 0x4E, 0x45, 0x43, 0x54];
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4F, 0x4E, 0x4E, 0x45, 0x43, 0x54];
+                buf.extend(vec![0u8; 513 - buf.len()]);
                 write_data(&self.device, buf.as_slice())?;
                 Ok(())
             }
@@ -765,12 +767,12 @@ impl StreamDeck {
         self.initialize()?;
         match self.kind {
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 => {
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x44, 0x43];
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x44, 0x43];
+                buf.extend(vec![0u8; 513 - buf.len()]);
                 write_data(&self.device, buf.as_slice())?;
 
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4E];
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4E];
+                buf.extend(vec![0u8; 513 - buf.len()]);
                 write_data(&self.device, buf.as_slice())?;
 
                 Ok(())
@@ -794,9 +796,9 @@ impl StreamDeck {
 
         match self.kind {
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
-                let mut buf = vec![0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
 
-                buf.extend(vec![0u8; 512 - buf.len()]);
+                buf.extend(vec![0u8; 513 - buf.len()]);
 
                 write_data(&self.device, buf.as_slice())?;
             }
@@ -863,13 +865,13 @@ impl WriteImageParameters {
     pub fn for_key(kind: Kind, image_data_len: usize) -> Self {
         let image_report_length = match kind {
             Kind::Original => 8191,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 512,
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 513,
             _ => 1024,
         };
 
         let image_report_header_length = match kind {
             Kind::Original | Kind::Mini | Kind::MiniMk2 => 16,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 0,
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => 1,
             _ => 8,
         };
 
