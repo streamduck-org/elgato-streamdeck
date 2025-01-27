@@ -2,7 +2,7 @@
 name = "elgato-streamdeck"
 description = "HidApi driver for Elgato Stream Decks"
 authors = ["TheJebForge"]
-version = "0.9.1"
+version = "0.9.2"
 edition = "2021"
 readme = "README.md"
 homepage = "https://github.com/streamduck-org"
@@ -11,7 +11,7 @@ license = "MPL-2.0"
 
 [dependencies]
 hidapi = "2.6"
-image = { version = "0.25.4", default-features = false, features = [
+image = { version = "0.25.5", default-features = false, features = [
   "bmp",
   "jpeg",
 ] }
