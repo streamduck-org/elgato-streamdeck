@@ -78,4 +78,5 @@ As it stands, this library should support the following devices:
 - Ajazz AKP153E (thanks to [@teras](https://github.com/teras))
 - Ajazz AKP153R (thanks to [@teras](https://github.com/teras) and [@damnkrat](https://github.com/damnkrat))
 - Ajazz AKP815 (thanks to [@teras](https://github.com/teras))
+- Ajazz AKP03R (thanks to [@4ndv](https://github.com/4ndv))
 - MiraBox HSV293S (thanks to [@czyz](https://github.com/czyz))
