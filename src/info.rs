@@ -43,6 +43,9 @@ pub const PID_AJAZZ_AKP153E: u16 = 0x1010;
 /// Product ID of Ajazz AKP153R Desk Controller
 pub const PID_AJAZZ_AKP153R: u16 = 0x1020;
 
+/// Product ID of Ajazz AKP03R Desk Controller
+pub const PID_AJAZZ_AKP03R: u16 = 0x1003;
+
 const RECOGNIZED_VENDORS: [u16; 3] = [ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID_1, AJAZZ_VENDOR_ID_2];
 
 /// Returns true for vendors IDs that are recognized by the library
@@ -81,6 +84,8 @@ pub enum Kind {
     Akp153R,
     /// Ajazz AKP815 Desk Controller
     Akp815,
+    /// Ajazz AKP03R Desk Controller
+    Akp03R,
     /// MiraBox HSV293S
     MiraBoxHSV293S,
 }
@@ -108,6 +113,7 @@ impl Kind {
                 PID_AJAZZ_AKP153E => Some(Kind::Akp153E),
                 PID_AJAZZ_AKP153R => Some(Kind::Akp153R),
                 PID_AJAZZ_AKP815 => Some(Kind::Akp815),
+                PID_AJAZZ_AKP03R => Some(Kind::Akp03R),
                 PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
                 _ => None,
             },
@@ -133,6 +139,7 @@ impl Kind {
             Kind::Akp815 => PID_AJAZZ_AKP815,
             Kind::Akp153E => PID_AJAZZ_AKP153E,
             Kind::Akp153R => PID_AJAZZ_AKP153R,
+            Kind::Akp03R => PID_AJAZZ_AKP03R,
             Kind::MiraBoxHSV293S => PID_MIRABOX_HSV293S,
         }
     }
@@ -154,6 +161,7 @@ impl Kind {
             Kind::Akp815 => AJAZZ_VENDOR_ID_1,
             Kind::Akp153E => AJAZZ_VENDOR_ID_2,
             Kind::Akp153R => AJAZZ_VENDOR_ID_2,
+            Kind::Akp03R => AJAZZ_VENDOR_ID_2,
             Kind::MiraBoxHSV293S => AJAZZ_VENDOR_ID_1,
         }
     }
@@ -168,6 +176,7 @@ impl Kind {
             Kind::Neo | Kind::Plus => 8,
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => 15 + 3,
             Kind::Akp815 => 15,
+            Kind::Akp03R => 6 + 3,
         }
     }
 
@@ -181,6 +190,7 @@ impl Kind {
             Kind::Neo | Kind::Plus => 2,
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => 3,
             Kind::Akp815 => 5,
+            Kind::Akp03R => 3,
         }
     }
 
@@ -194,6 +204,7 @@ impl Kind {
             Kind::Neo | Kind::Plus => 4,
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => 6,
             Kind::Akp815 => 3,
+            Kind::Akp03R => 3,
         }
     }
 
@@ -201,6 +212,7 @@ impl Kind {
     pub fn encoder_count(&self) -> u8 {
         match self {
             Kind::Plus => 4,
+            Kind::Akp03R => 3,
             _ => 0,
         }
     }
@@ -285,6 +297,13 @@ impl Kind {
                 mode: ImageMode::JPEG,
                 size: (100, 100),
                 rotation: ImageRotation::Rot180,
+                mirror: ImageMirroring::None,
+            },
+
+            Kind::Akp03R => ImageFormat {
+                mode: ImageMode::JPEG,
+                size: (64, 64),
+                rotation: ImageRotation::Rot0,
                 mirror: ImageMirroring::None,
             },
         }
