@@ -112,6 +112,16 @@ pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
     (key - col) + ((kind.column_count() - 1) - col)
 }
 
+/// Extends buffer up to required packet length
+pub fn ajazz_extend_packet(kind: &Kind, buf: &mut Vec<u8>) {
+    let length = match kind {
+        Kind::Akp03R => 1025,
+        _ => 513,
+    };
+
+    buf.extend(vec![0u8; length - buf.len()]);
+}
+
 /// Reads button states, empty vector if no data
 pub fn read_button_states(kind: &Kind, states: &[u8]) -> Vec<bool> {
     if states[0] == 0 {
@@ -119,7 +129,7 @@ pub fn read_button_states(kind: &Kind, states: &[u8]) -> Vec<bool> {
     }
 
     match kind {
-        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => {
+        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::Akp03R | Kind::MiraBoxHSV293S => {
             let mut bools = vec![];
 
             for i in 0..kind.key_count() {
@@ -178,4 +188,71 @@ pub fn read_encoder_input(kind: &Kind, data: &[u8]) -> Result<StreamDeckInput, S
 
         _ => Err(StreamDeckError::BadData),
     }
+}
+
+/// Read inputs from Ajazz AKP03
+pub fn ajazz03_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    match input {
+        (0..=6) | 0x25 | 0x30 | 0x31 => ajazz03_read_button_press(kind, input),
+        0x90 | 0x91 | 0x50 | 0x51 | 0x60 | 0x61 => ajazz03_read_encoder_value(kind, input),
+        0x33 | 0x34 | 0x35 => ajazz03_read_encoder_press(kind, input),
+        _ => Err(StreamDeckError::BadData),
+    }
+}
+
+fn ajazz03_read_button_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let mut button_states = vec![0x01];
+    button_states.extend(vec![0u8; (kind.key_count() + 1) as usize]);
+
+    if input == 0 {
+        return Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)));
+    }
+
+    let pressed_index: usize = match input {
+        // Six buttons with displays
+        (1..=6) => input as usize,
+        // Three buttons without displays
+        0x25 => 7,
+        0x30 => 8,
+        0x31 => 9,
+        _ => return Err(StreamDeckError::BadData),
+    };
+
+    button_states[pressed_index] = 0x1u8;
+
+    Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)))
+}
+
+fn ajazz03_read_encoder_value(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let mut encoder_values = vec![0i8; kind.encoder_count() as usize];
+
+    let (encoder, value): (usize, i8) = match input {
+        // Left encoder
+        0x90 => (0, -1),
+        0x91 => (0, 1),
+        // Middle (top) encoder
+        0x50 => (1, -1),
+        0x51 => (1, 1),
+        // Right encoder
+        0x60 => (2, -1),
+        0x61 => (2, 1),
+        _ => return Err(StreamDeckError::BadData),
+    };
+
+    encoder_values[encoder] = value;
+    Ok(StreamDeckInput::EncoderTwist(encoder_values))
+}
+
+fn ajazz03_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let mut encoder_states = vec![false; kind.encoder_count() as usize];
+
+    let encoder: usize = match input {
+        0x33 => 0, // Left encoder
+        0x35 => 1, // Middle (top) encoder
+        0x34 => 2, // Right encoder
+        _ => return Err(StreamDeckError::BadData),
+    };
+
+    encoder_states[encoder] = true;
+    Ok(StreamDeckInput::EncoderStateChange(encoder_states))
 }
