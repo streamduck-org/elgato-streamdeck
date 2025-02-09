@@ -76,6 +76,6 @@ As it stands, this library should support the following devices:
 - Stream Deck Neo (thanks to [@ejiektpobehuk](https://github.com/ejiektpobehuk), [@AkechiShiro](https://github.com/AkechiShiro) and [node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck))
 - Ajazz AKP153 (thanks to [@ZCube](https://github.com/ZCube))
 - Ajazz AKP153E (thanks to [@teras](https://github.com/teras))
-- Ajazz AKP153R (thanks to [@teras](https://github.com/teras) and [@damnkrat](https://github.com/damnkrat))
+- Ajazz AKP153R (thanks to [@teras](https://github.com/teras), [@damnkrat](https://github.com/damnkrat) and [@4ndv](https://github.com/4ndv))
 - Ajazz AKP815 (thanks to [@teras](https://github.com/teras))
 - MiraBox HSV293S (thanks to [@czyz](https://github.com/czyz))
