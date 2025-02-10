@@ -318,7 +318,7 @@ impl StreamDeck {
 
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::Akp03R | Kind::MiraBoxHSV293S => {
                 self.set_brightness(100)?;
-                self.clear_button_image(0xff)?;
+                self.clear_all_button_images()?;
                 Ok(())
             }
 
@@ -592,7 +592,17 @@ impl StreamDeck {
     pub fn clear_all_button_images(&self) -> Result<(), StreamDeckError> {
         self.initialize()?;
         match self.kind {
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::Akp03R | Kind::MiraBoxHSV293S => self.clear_button_image(0xff),
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => self.clear_button_image(0xff),
+            Kind::Akp03R => {
+                self.clear_button_image(0xFF)?;
+
+                // Akp03R requires STP to commit clearing the screen
+                let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
+                ajazz_extend_packet(&self.kind, &mut buf);
+                write_data(&self.device, buf.as_slice())?;
+
+                Ok(())
+            }
             _ => {
                 for i in 0..self.kind.key_count() {
                     self.clear_button_image(i)?

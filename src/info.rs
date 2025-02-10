@@ -302,7 +302,7 @@ impl Kind {
 
             Kind::Akp03R => ImageFormat {
                 mode: ImageMode::JPEG,
-                size: (64, 64),
+                size: (60, 60),
                 rotation: ImageRotation::Rot0,
                 mirror: ImageMirroring::None,
             },
