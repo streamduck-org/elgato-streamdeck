@@ -115,7 +115,7 @@ pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
 /// Extends buffer up to required packet length
 pub fn ajazz_extend_packet(kind: &Kind, buf: &mut Vec<u8>) {
     let length = match kind {
-        Kind::Akp03E | Kind::Akp03R => 1025,
+        kind if kind.is_mirabox_v2() => 1025,
         _ => 513,
     };
 
@@ -129,7 +129,7 @@ pub fn read_button_states(kind: &Kind, states: &[u8]) -> Vec<bool> {
     }
 
     match kind {
-        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxHSV293S => {
+        kind if kind.is_mirabox() => {
             let mut bools = vec![];
 
             for i in 0..kind.key_count() {

@@ -450,6 +450,27 @@ impl Kind {
             _ => vec![],
         }
     }
+
+    /// Returns true for Mirabox devices with 512 byte packet length
+    pub fn is_mirabox_v1(&self) -> bool {
+        match self {
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true for Mirabox devices with 1024 byte packet length
+    pub fn is_mirabox_v2(&self) -> bool {
+        match self {
+            Kind::Akp03E | Kind::Akp03R => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true for Mirabox devices
+    pub fn is_mirabox(&self) -> bool {
+        self.is_mirabox_v1() || self.is_mirabox_v2()
+    }
 }
 
 /// Image format used by the Stream Deck
