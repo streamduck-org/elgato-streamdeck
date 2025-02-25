@@ -573,10 +573,10 @@ impl StreamDeck {
 
             write_data(&self.device, buf.as_slice())?;
 
-            return Ok(());
+            Ok(())
+        } else {
+            Ok(self.send_image(key, &self.kind.blank_image())?)
         }
-
-        Ok(self.send_image(key, &self.kind.blank_image())?)
     }
 
     /// Sets blank images to every button, changes must be flushed with `.flush()` before
