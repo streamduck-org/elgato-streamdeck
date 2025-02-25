@@ -222,7 +222,7 @@ impl AsyncDeviceStateReader {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
                     match self.device.kind {
-                        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::Akp03R | Kind::MiraBoxHSV293S => {
+                        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxHSV293S => {
                             if *their {
                                 updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                 updates.push(DeviceStateUpdate::ButtonUp(index as u8));
@@ -254,7 +254,7 @@ impl AsyncDeviceStateReader {
             StreamDeckInput::EncoderStateChange(encoders) => {
                 for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
                     match self.device.kind {
-                        Kind::Akp03R => {
+                        Kind::Akp03E | Kind::Akp03R => {
                             if *their {
                                 updates.push(DeviceStateUpdate::EncoderDown(index as u8));
                                 updates.push(DeviceStateUpdate::EncoderUp(index as u8));
