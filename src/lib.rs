@@ -371,11 +371,6 @@ impl StreamDeck {
             return Err(StreamDeckError::InvalidKeyIndex);
         }
 
-        // Key count is 9 for Akp03*, but only the first 6 have screens, so don't output anything after 6
-        if (self.kind == Kind::Akp03E || self.kind == Kind::Akp03R) && key > 6 {
-            return Ok(());
-        }
-
         let key = if let Kind::Original = self.kind {
             flip_key_index(&self.kind, key)
         } else if let Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S = self.kind {
@@ -445,6 +440,11 @@ impl StreamDeck {
     /// Writes image data to Stream Deck device, changes must be flushed with `.flush()` before
     /// they will appear on the device!
     pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
+        // Key count is 9 for Akp03*, but only the first 6 (0-5) have screens, so don't output anything for keys 6, 7, 8
+        if (self.kind == Kind::Akp03E || self.kind == Kind::Akp03R) && key >= 6 {
+            return Ok(());
+        }
+
         let cache_entry = ImageCache {
             key,
             image_data: image_data.to_vec(), // Convert &[u8] to Vec<u8>
