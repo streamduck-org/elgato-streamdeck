@@ -221,27 +221,24 @@ impl AsyncDeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    match self.device.kind {
-                        kind if kind.is_mirabox() => {
-                            if *their {
-                                updates.push(DeviceStateUpdate::ButtonDown(index as u8));
-                                updates.push(DeviceStateUpdate::ButtonUp(index as u8));
-                            }
+                    if self.device.kind.is_mirabox() {
+                        if *their {
+                            updates.push(DeviceStateUpdate::ButtonDown(index as u8));
+                            updates.push(DeviceStateUpdate::ButtonUp(index as u8));
                         }
-                        _ => {
-                            if *their != *mine {
-                                if index < self.device.kind.key_count() as usize {
-                                    if *their {
-                                        updates.push(DeviceStateUpdate::ButtonDown(index as u8));
-                                    } else {
-                                        updates.push(DeviceStateUpdate::ButtonUp(index as u8));
-                                    }
+                    } else {
+                        if *their != *mine {
+                            if index < self.device.kind.key_count() as usize {
+                                if *their {
+                                    updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                                 } else {
-                                    if *their {
-                                        updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - self.device.kind.key_count()));
-                                    } else {
-                                        updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - self.device.kind.key_count()));
-                                    }
+                                    updates.push(DeviceStateUpdate::ButtonUp(index as u8));
+                                }
+                            } else {
+                                if *their {
+                                    updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - self.device.kind.key_count()));
+                                } else {
+                                    updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - self.device.kind.key_count()));
                                 }
                             }
                         }

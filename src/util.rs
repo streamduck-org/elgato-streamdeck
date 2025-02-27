@@ -114,10 +114,7 @@ pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
 
 /// Extends buffer up to required packet length
 pub fn ajazz_extend_packet(kind: &Kind, buf: &mut Vec<u8>) {
-    let length = match kind {
-        kind if kind.is_mirabox_v2() => 1025,
-        _ => 513,
-    };
+    let length = if kind.is_mirabox_v2() { 1025 } else { 513 };
 
     buf.extend(vec![0u8; length - buf.len()]);
 }
