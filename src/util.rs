@@ -192,7 +192,7 @@ pub fn ajazz03_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, Str
     match input {
         (0..=6) | 0x25 | 0x30 | 0x31 => ajazz03_read_button_press(kind, input),
         0x90 | 0x91 | 0x50 | 0x51 | 0x60 | 0x61 => ajazz03_read_encoder_value(kind, input),
-        0x33 | 0x34 | 0x35 => ajazz03_read_encoder_press(kind, input),
+        0x33..=0x35 => ajazz03_read_encoder_press(kind, input),
         _ => Err(StreamDeckError::BadData),
     }
 }
