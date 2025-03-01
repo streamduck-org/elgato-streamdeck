@@ -1042,20 +1042,18 @@ impl DeviceStateReader {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));
                         }
-                    } else {
-                        if their != mine {
-                            let key_count = self.device.kind.key_count();
-                            if index < key_count as usize {
-                                if *their {
-                                    updates.push(DeviceStateUpdate::ButtonDown(index as u8));
-                                } else {
-                                    updates.push(DeviceStateUpdate::ButtonUp(index as u8));
-                                }
-                            } else if *their {
-                                updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - key_count));
+                    } else if their != mine {
+                        let key_count = self.device.kind.key_count();
+                        if index < key_count as usize {
+                            if *their {
+                                updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             } else {
-                                updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - key_count));
+                                updates.push(DeviceStateUpdate::ButtonUp(index as u8));
                             }
+                        } else if *their {
+                            updates.push(DeviceStateUpdate::TouchPointDown(index as u8 - key_count));
+                        } else {
+                            updates.push(DeviceStateUpdate::TouchPointUp(index as u8 - key_count));
                         }
                     }
                 }
