@@ -55,7 +55,7 @@ pub fn extract_str(bytes: &[u8]) -> Result<String, Utf8Error> {
 | 13 | 14 | 15 | 16 | 17 | 18 |
  -----------------------------
 
- Ajazz's AKP153(E) key index
+ Ajazz AKP153x's key index
  -----------------------------
 | 0d | 0a | 07 | 04 | 01 | 10 |
 |----|----|----|----|----|----|
@@ -64,7 +64,7 @@ pub fn extract_str(bytes: &[u8]) -> Result<String, Utf8Error> {
 | 0f | 0c | 09 | 06 | 03 | 12 |
  -----------------------------
 
- Ajazz's AKP815 key index
+ Ajazz AKP815's key index
   --------------
  | 0f | 0e | 0d |
  |----|----|----|
@@ -113,7 +113,7 @@ pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
 }
 
 /// Extends buffer up to required packet length
-pub fn ajazz_extend_packet(kind: &Kind, buf: &mut Vec<u8>) {
+pub fn mirabox_extend_packet(kind: &Kind, buf: &mut Vec<u8>) {
     let length = if kind.is_mirabox_v2() { 1025 } else { 513 };
 
     buf.extend(vec![0u8; length - buf.len()]);

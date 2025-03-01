@@ -22,34 +22,34 @@ pub const PID_STREAMDECK_PEDAL: u16 = 0x0086;
 /// Product ID of Stream Deck Plus
 pub const PID_STREAMDECK_PLUS: u16 = 0x0084;
 
-/// Vendor ID of Ajazz Desk Controller
-pub const AJAZZ_VENDOR_ID_1: u16 = 0x5548;
+/// A Mirabox vendor ID
+pub const MIRABOX_VENDOR_ID_1: u16 = 0x5548;
 
-/// Product ID of Ajazz AKP153 Desk Controller
+/// Product ID of Ajazz AKP153
 pub const PID_AJAZZ_AKP153: u16 = 0x6674;
+
+/// Product ID of Ajazz AKP815
+pub const PID_AJAZZ_AKP815: u16 = 0x6672;
 
 /// Product ID of the "FHOOU" (front label) and "MiraBox HSV293S" (rear label). Seems just like an AKP153.
 pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
 
-/// Product ID of Ajazz AKP815 Desk Controller
-pub const PID_AJAZZ_AKP815: u16 = 0x6672;
+/// A Mirabox vendor ID
+pub const MIRABOX_VENDOR_ID_2: u16 = 0x0300;
 
-/// Vendor ID of Ajazz AKP153E Desk Controller
-pub const AJAZZ_VENDOR_ID_2: u16 = 0x0300;
-
-/// Product ID of Ajazz AKP153E Desk Controller
+/// Product ID of Ajazz AKP153E
 pub const PID_AJAZZ_AKP153E: u16 = 0x1010;
 
-/// Product ID of Ajazz AKP153R Desk Controller
+/// Product ID of Ajazz AKP153R
 pub const PID_AJAZZ_AKP153R: u16 = 0x1020;
 
-/// Product ID of Ajazz AKP03E Desk Controller
+/// Product ID of Ajazz AKP03E
 pub const PID_AJAZZ_AKP03E: u16 = 0x3002;
 
-/// Product ID of Ajazz AKP03R Desk Controller
+/// Product ID of Ajazz AKP03R
 pub const PID_AJAZZ_AKP03R: u16 = 0x1003;
 
-const RECOGNIZED_VENDORS: [u16; 3] = [ELGATO_VENDOR_ID, AJAZZ_VENDOR_ID_1, AJAZZ_VENDOR_ID_2];
+const RECOGNIZED_VENDORS: [u16; 3] = [ELGATO_VENDOR_ID, MIRABOX_VENDOR_ID_1, MIRABOX_VENDOR_ID_2];
 
 /// Returns true for vendors IDs that are recognized by the library
 pub fn is_vendor_familiar(vendor: &u16) -> bool {
@@ -79,17 +79,17 @@ pub enum Kind {
     Pedal,
     /// Stream Deck Plus
     Plus,
-    /// Ajazz AKP153 Desk Controller
+    /// Ajazz AKP153
     Akp153,
-    /// Ajazz AKP153E Desk Controller
+    /// Ajazz AKP153E
     Akp153E,
-    /// Ajazz AKP153R Desk Controller
+    /// Ajazz AKP153R
     Akp153R,
-    /// Ajazz AKP815 Desk Controller
+    /// Ajazz AKP815
     Akp815,
-    /// Ajazz AKP03E Desk Controller
+    /// Ajazz AKP03E
     Akp03E,
-    /// Ajazz AKP03R Desk Controller
+    /// Ajazz AKP03R
     Akp03R,
     /// MiraBox HSV293S
     MiraBoxHSV293S,
@@ -113,14 +113,18 @@ impl Kind {
                 _ => None,
             },
 
-            AJAZZ_VENDOR_ID_1 | AJAZZ_VENDOR_ID_2 => match pid {
+            MIRABOX_VENDOR_ID_1 => match pid {
                 PID_AJAZZ_AKP153 => Some(Kind::Akp153),
+                PID_AJAZZ_AKP815 => Some(Kind::Akp815),
+                PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
+                _ => None,
+            },
+
+            MIRABOX_VENDOR_ID_2 => match pid {
                 PID_AJAZZ_AKP153E => Some(Kind::Akp153E),
                 PID_AJAZZ_AKP153R => Some(Kind::Akp153R),
-                PID_AJAZZ_AKP815 => Some(Kind::Akp815),
                 PID_AJAZZ_AKP03E => Some(Kind::Akp03E),
                 PID_AJAZZ_AKP03R => Some(Kind::Akp03R),
-                PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
                 _ => None,
             },
 
@@ -142,9 +146,9 @@ impl Kind {
             Kind::Pedal => PID_STREAMDECK_PEDAL,
             Kind::Plus => PID_STREAMDECK_PLUS,
             Kind::Akp153 => PID_AJAZZ_AKP153,
-            Kind::Akp815 => PID_AJAZZ_AKP815,
             Kind::Akp153E => PID_AJAZZ_AKP153E,
             Kind::Akp153R => PID_AJAZZ_AKP153R,
+            Kind::Akp815 => PID_AJAZZ_AKP815,
             Kind::Akp03E => PID_AJAZZ_AKP03E,
             Kind::Akp03R => PID_AJAZZ_AKP03R,
             Kind::MiraBoxHSV293S => PID_MIRABOX_HSV293S,
@@ -164,13 +168,13 @@ impl Kind {
             Kind::Neo => ELGATO_VENDOR_ID,
             Kind::Pedal => ELGATO_VENDOR_ID,
             Kind::Plus => ELGATO_VENDOR_ID,
-            Kind::Akp153 => AJAZZ_VENDOR_ID_1,
-            Kind::Akp815 => AJAZZ_VENDOR_ID_1,
-            Kind::Akp153E => AJAZZ_VENDOR_ID_2,
-            Kind::Akp153R => AJAZZ_VENDOR_ID_2,
-            Kind::Akp03E => AJAZZ_VENDOR_ID_2,
-            Kind::Akp03R => AJAZZ_VENDOR_ID_2,
-            Kind::MiraBoxHSV293S => AJAZZ_VENDOR_ID_1,
+            Kind::Akp153 => MIRABOX_VENDOR_ID_1,
+            Kind::Akp153E => MIRABOX_VENDOR_ID_2,
+            Kind::Akp153R => MIRABOX_VENDOR_ID_2,
+            Kind::Akp815 => MIRABOX_VENDOR_ID_1,
+            Kind::Akp03E => MIRABOX_VENDOR_ID_2,
+            Kind::Akp03R => MIRABOX_VENDOR_ID_2,
+            Kind::MiraBoxHSV293S => MIRABOX_VENDOR_ID_1,
         }
     }
 

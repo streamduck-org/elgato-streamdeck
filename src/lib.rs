@@ -23,7 +23,7 @@ use image::{DynamicImage, ImageError};
 
 use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
-    ajazz03_read_input, ajazz_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
+    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
     read_encoder_input, read_lcd_input, send_feature_report, write_data,
 };
 
@@ -222,11 +222,11 @@ impl StreamDeck {
 
         if self.kind.is_mirabox() {
             let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x44, 0x49, 0x53];
-            ajazz_extend_packet(&self.kind, &mut buf);
+            mirabox_extend_packet(&self.kind, &mut buf);
             write_data(&self.device, buf.as_slice())?;
 
             let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, 0x00, 0x00];
-            ajazz_extend_packet(&self.kind, &mut buf);
+            mirabox_extend_packet(&self.kind, &mut buf);
             write_data(&self.device, buf.as_slice())?;
         }
 
@@ -348,7 +348,7 @@ impl StreamDeck {
             kind if kind.is_mirabox() => {
                 let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x49, 0x47, 0x00, 0x00, percent];
 
-                ajazz_extend_packet(&self.kind, &mut buf);
+                mirabox_extend_packet(&self.kind, &mut buf);
 
                 write_data(&self.device, buf.as_slice())?;
 
@@ -402,7 +402,7 @@ impl StreamDeck {
                 key + 1,
             ];
 
-            ajazz_extend_packet(&self.kind, &mut buf);
+            mirabox_extend_packet(&self.kind, &mut buf);
 
             write_data(&self.device, buf.as_slice())?;
         }
@@ -435,7 +435,7 @@ impl StreamDeck {
     /// Writes image data to Stream Deck device, changes must be flushed with `.flush()` before
     /// they will appear on the device!
     pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
-        // Key count is 9 for Akp03*, but only the first 6 (0-5) have screens, so don't output anything for keys 6, 7, 8
+        // Key count is 9 for AKP03x, but only the first 6 (0-5) have screens, so don't output anything for keys 6, 7, 8
         if (self.kind == Kind::Akp03E || self.kind == Kind::Akp03R) && key >= 6 {
             return Ok(());
         }
@@ -569,7 +569,7 @@ impl StreamDeck {
 
             let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
 
-            ajazz_extend_packet(&self.kind, &mut buf);
+            mirabox_extend_packet(&self.kind, &mut buf);
 
             write_data(&self.device, buf.as_slice())?;
 
@@ -590,7 +590,7 @@ impl StreamDeck {
 
                 // Mirabox "v2" requires STP to commit clearing the screen
                 let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
-                ajazz_extend_packet(&self.kind, &mut buf);
+                mirabox_extend_packet(&self.kind, &mut buf);
                 write_data(&self.device, buf.as_slice())?;
 
                 Ok(())
@@ -627,7 +627,7 @@ impl StreamDeck {
         // 854 * 480 * 3
         let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x4c, 0x4f, 0x47, 0x00, 0x12, 0xc3, 0xc0, 0x01];
 
-        ajazz_extend_packet(&self.kind, &mut buf);
+        mirabox_extend_packet(&self.kind, &mut buf);
 
         write_data(&self.device, buf.as_slice())?;
 
@@ -759,7 +759,7 @@ impl StreamDeck {
 
         let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4e];
 
-        ajazz_extend_packet(&self.kind, &mut buf);
+        mirabox_extend_packet(&self.kind, &mut buf);
 
         write_data(&self.device, buf.as_slice())?;
 
@@ -775,7 +775,7 @@ impl StreamDeck {
         }
 
         let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4F, 0x4E, 0x4E, 0x45, 0x43, 0x54];
-        ajazz_extend_packet(&self.kind, &mut buf);
+        mirabox_extend_packet(&self.kind, &mut buf);
         write_data(&self.device, buf.as_slice())?;
         Ok(())
     }
@@ -789,11 +789,11 @@ impl StreamDeck {
         }
 
         let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x44, 0x43];
-        ajazz_extend_packet(&self.kind, &mut buf);
+        mirabox_extend_packet(&self.kind, &mut buf);
         write_data(&self.device, buf.as_slice())?;
 
         let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x48, 0x41, 0x4E];
-        ajazz_extend_packet(&self.kind, &mut buf);
+        mirabox_extend_packet(&self.kind, &mut buf);
         write_data(&self.device, buf.as_slice())?;
 
         Ok(())
@@ -814,7 +814,7 @@ impl StreamDeck {
         if self.kind.is_mirabox() {
             let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50];
 
-            ajazz_extend_packet(&self.kind, &mut buf);
+            mirabox_extend_packet(&self.kind, &mut buf);
 
             write_data(&self.device, buf.as_slice())?;
         }
