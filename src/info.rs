@@ -453,18 +453,12 @@ impl Kind {
 
     /// Returns true for Mirabox devices with 512 byte packet length
     pub fn is_mirabox_v1(&self) -> bool {
-        match self {
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S => true,
-            _ => false,
-        }
+        matches!(self, Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S)
     }
 
     /// Returns true for Mirabox devices with 1024 byte packet length
     pub fn is_mirabox_v2(&self) -> bool {
-        match self {
-            Kind::Akp03E | Kind::Akp03R => true,
-            _ => false,
-        }
+        matches!(self, Kind::Akp03E | Kind::Akp03R)
     }
 
     /// Returns true for Mirabox devices
