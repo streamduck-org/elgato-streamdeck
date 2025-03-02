@@ -269,12 +269,13 @@ impl StreamDeck {
                     let key = match self.kind {
                         Kind::Akp815 => inverse_key_index(&self.kind, data[9] - 1),
                         Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => ajazz153_to_elgato_input(&self.kind, data[9] - 1),
-                        _ => data[9] - 1
+                        Kind::MiraBoxDK0108D => data[9] - 1,
+                        _ => data[9] - 1,
                     };
 
-                    // The thing is this device can slide the view then it shows 48, 49, 50 as a key input. It seems there is no device
-                    // which has this function on this repo. So, as is, this function is dropped.
-                    if key > self.kind.key_count() && self.kind == Kind::MiraBoxDK0108D {
+                    // This device can slide its view to show keys 48, 49 and 50.
+                    // This functionality is not yet implemented in this library. So, for now, drop related events.
+                    if self.kind == Kind::MiraBoxDK0108D && key > self.kind.key_count() {
                         return Ok(StreamDeckInput::NoData);
                     }
 

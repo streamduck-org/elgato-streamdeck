@@ -25,9 +25,6 @@ pub const PID_STREAMDECK_PLUS: u16 = 0x0084;
 /// A Mirabox vendor ID
 pub const MIRABOX_VENDOR_ID_1: u16 = 0x5548;
 
-/// Product ID of "MiraBox DK0108D" 
-pub const PID_MIRABOX_DK0108D: u16 = 0x6667;
-
 /// Product ID of Ajazz AKP153
 pub const PID_AJAZZ_AKP153: u16 = 0x6674;
 
@@ -36,6 +33,9 @@ pub const PID_AJAZZ_AKP815: u16 = 0x6672;
 
 /// Product ID of the "FHOOU" (front label) and "MiraBox HSV293S" (rear label). Seems just like an AKP153.
 pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
+
+/// Product ID of MiraBox DK0108D
+pub const PID_MIRABOX_DK0108D: u16 = 0x6667;
 
 /// A Mirabox vendor ID
 pub const MIRABOX_VENDOR_ID_2: u16 = 0x0300;
