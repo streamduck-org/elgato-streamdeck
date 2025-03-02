@@ -443,7 +443,7 @@ impl StreamDeck {
     /// they will appear on the device!
     pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         // Key count is 9 for AKP03x, but only the first 6 (0-5) have screens, so don't output anything for keys 6, 7, 8
-        if (self.kind == Kind::Akp03E || self.kind == Kind::Akp03R) && key >= 6 {
+        if matches!(self.kind, Kind::Akp03 | Kind::Akp03E | Kind::Akp03R) && key >= 6 {
             return Ok(());
         }
 
@@ -1070,21 +1070,16 @@ impl DeviceStateReader {
 
             StreamDeckInput::EncoderStateChange(encoders) => {
                 for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
-                    match self.device.kind {
-                        Kind::Akp03E | Kind::Akp03R => {
-                            if *their {
-                                updates.push(DeviceStateUpdate::EncoderDown(index as u8));
-                                updates.push(DeviceStateUpdate::EncoderUp(index as u8));
-                            }
+                    if self.device.kind.is_mirabox() {
+                        if *their {
+                            updates.push(DeviceStateUpdate::EncoderDown(index as u8));
+                            updates.push(DeviceStateUpdate::EncoderUp(index as u8));
                         }
-                        _ => {
-                            if *their != *mine {
-                                if *their {
-                                    updates.push(DeviceStateUpdate::EncoderDown(index as u8));
-                                } else {
-                                    updates.push(DeviceStateUpdate::EncoderUp(index as u8));
-                                }
-                            }
+                    } else if *their != *mine {
+                        if *their {
+                            updates.push(DeviceStateUpdate::EncoderDown(index as u8));
+                        } else {
+                            updates.push(DeviceStateUpdate::EncoderUp(index as u8));
                         }
                     }
                 }

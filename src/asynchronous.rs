@@ -246,21 +246,16 @@ impl AsyncDeviceStateReader {
 
             StreamDeckInput::EncoderStateChange(encoders) => {
                 for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
-                    match self.device.kind {
-                        Kind::Akp03E | Kind::Akp03R => {
-                            if *their {
-                                updates.push(DeviceStateUpdate::EncoderDown(index as u8));
-                                updates.push(DeviceStateUpdate::EncoderUp(index as u8));
-                            }
+                    if self.device.kind.is_mirabox() {
+                        if *their {
+                            updates.push(DeviceStateUpdate::EncoderDown(index as u8));
+                            updates.push(DeviceStateUpdate::EncoderUp(index as u8));
                         }
-                        _ => {
-                            if *their != *mine {
-                                if *their {
-                                    updates.push(DeviceStateUpdate::EncoderDown(index as u8));
-                                } else {
-                                    updates.push(DeviceStateUpdate::EncoderUp(index as u8));
-                                }
-                            }
+                    } else if *their != *mine {
+                        if *their {
+                            updates.push(DeviceStateUpdate::EncoderDown(index as u8));
+                        } else {
+                            updates.push(DeviceStateUpdate::EncoderUp(index as u8));
                         }
                     }
                 }
