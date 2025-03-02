@@ -23,7 +23,7 @@ use image::{DynamicImage, ImageError};
 
 use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
-    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, filter_key_index, read_button_states, read_data,
+    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
     read_encoder_input, read_lcd_input, send_feature_report, write_data,
 };
 
@@ -266,12 +266,10 @@ impl StreamDeck {
                 states.extend(vec![0u8; (self.kind.key_count() + 1) as usize]);
 
                 if data[9] != 0 {
-                    let key = if self.kind == Kind::Akp815 {
-                        inverse_key_index(&self.kind, data[9] - 1)
-                    } else if self.kind == Kind::MiraBoxDK0108D {
-                        filter_key_index(&self.kind, data[9] - 1)
-                    } else {
-                        ajazz153_to_elgato_input(&self.kind, data[9] - 1)
+                    let key = match self.kind {
+                        Kind::Akp815 => inverse_key_index(&self.kind, data[9] - 1),
+                        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => elgato_to_ajazz153(&self.kind, data[9] - 1),
+                        _ => data[9] - 1
                     };
 
                     states[(key + 1) as usize] = 0x1u8;
@@ -565,7 +563,7 @@ impl StreamDeck {
         if self.kind.is_mirabox() {
             let key = match self.kind {
                 Kind::Akp815 => inverse_key_index(&self.kind, key),
-                Kind::Akp03E | Kind::Akp03R => key,
+                Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxDK0108D => key,
                 _ => elgato_to_ajazz153(&self.kind, key),
             };
 

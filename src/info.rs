@@ -209,9 +209,10 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 4,
             Kind::Pedal => 1,
             Kind::Neo | Kind::Plus => 2,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S | Kind::MiraBoxDK0108D => 3,
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => 3,
             Kind::Akp815 => 5,
             Kind::Akp03E | Kind::Akp03R => 3,
+            Kind::MiraBoxDK0108D => 3,
         }
     }
 
@@ -253,7 +254,8 @@ impl Kind {
             Kind::Plus => Some((800, 100)),
             Kind::Neo => Some((248, 58)),
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => Some((854, 480)),
-            Kind::Akp815 | Kind::MiraBoxDK0108D => Some((800, 480)),
+            Kind::Akp815 => Some((800, 480)),
+            Kind::MiraBoxDK0108D => Some((800, 480)),
             _ => None,
         }
     }
