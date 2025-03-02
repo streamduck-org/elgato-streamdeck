@@ -28,17 +28,14 @@ pub const MIRABOX_VENDOR_ID_1: u16 = 0x5548;
 /// Product ID of Ajazz AKP153
 pub const PID_AJAZZ_AKP153: u16 = 0x6674;
 
-/// Product ID of Ajazz AKP815
-pub const PID_AJAZZ_AKP815: u16 = 0x6672;
-
 /// Product ID of the "FHOOU" (front label) and "MiraBox HSV293S" (rear label). Seems just like an AKP153.
 pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
 
-/// A Mirabox vendor ID
-pub const MIRABOX_VENDOR_ID_2: u16 = 0x0300;
-
 /// Product ID of "MiraBox DK0108D" 
 pub const PID_MIRABOX_DK0108D: u16 = 0x6667;
+
+/// A Mirabox vendor ID
+pub const MIRABOX_VENDOR_ID_2: u16 = 0x0300;
 
 /// Product ID of Ajazz AKP815
 pub const PID_AJAZZ_AKP815: u16 = 0x6672;
@@ -255,8 +252,8 @@ impl Kind {
         match self {
             Kind::Plus => Some((800, 100)),
             Kind::Neo => Some((248, 58)),
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S | Kind::MiraBoxDK0108D => Some((854, 480)),
-            Kind::Akp815 => Some((800, 480)),
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => Some((854, 480)),
+            Kind::Akp815 | Kind::MiraBoxDK0108D => Some((800, 480)),
             _ => None,
         }
     }
@@ -311,7 +308,7 @@ impl Kind {
 
             Kind::Pedal => ImageFormat::default(),
 
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S | Kind::MiraBoxDK0108D => ImageFormat {
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (85, 85),
                 rotation: ImageRotation::Rot90,
@@ -330,6 +327,13 @@ impl Kind {
                 size: (60, 60),
                 rotation: ImageRotation::Rot0,
                 mirror: ImageMirroring::None,
+            },
+
+            Kind::MiraBoxDK0108D => ImageFormat {
+                mode: ImageMode::JPEG,
+                size: (72, 72),
+                rotation: ImageRotation::Rot180,
+                mirror: ImageMirroring::Both,
             },
         }
     }
@@ -470,7 +474,7 @@ impl Kind {
 
     /// Returns true for Mirabox devices with 512 byte packet length
     pub fn is_mirabox_v1(&self) -> bool {
-        matches!(self, Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S)
+        matches!(self, Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S | Kind::MiraBoxDK0108D)
     }
 
     /// Returns true for Mirabox devices with 1024 byte packet length
