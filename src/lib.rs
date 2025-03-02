@@ -266,11 +266,18 @@ impl StreamDeck {
                 states.extend(vec![0u8; (self.kind.key_count() + 1) as usize]);
 
                 if data[9] != 0 {
-                    let key = if self.kind == Kind::Akp815 {
-                        inverse_key_index(&self.kind, data[9] - 1)
-                    } else {
-                        ajazz153_to_elgato_input(&self.kind, data[9] - 1)
+                    let key = match self.kind {
+                        Kind::Akp815 => inverse_key_index(&self.kind, data[9] - 1),
+                        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => ajazz153_to_elgato_input(&self.kind, data[9] - 1),
+                        Kind::MiraBoxDK0108D => data[9] - 1,
+                        _ => unimplemented!(),
                     };
+
+                    // This device can slide its view, and as it does, it sends events for keys 48, 49 and 50.
+                    // This functionality is not yet implemented in this library. So, for now, drop related events.
+                    if self.kind == Kind::MiraBoxDK0108D && key > self.kind.key_count() {
+                        return Ok(StreamDeckInput::NoData);
+                    }
 
                     states[(key + 1) as usize] = 0x1u8;
                 }
@@ -563,8 +570,8 @@ impl StreamDeck {
         if self.kind.is_mirabox() {
             let key = match self.kind {
                 Kind::Akp815 => inverse_key_index(&self.kind, key),
-                Kind::Akp03E | Kind::Akp03R => key,
-                _ => elgato_to_ajazz153(&self.kind, key),
+                Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => elgato_to_ajazz153(&self.kind, key),
+                _ => key,
             };
 
             let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
