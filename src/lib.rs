@@ -569,8 +569,8 @@ impl StreamDeck {
         if self.kind.is_mirabox() {
             let key = match self.kind {
                 Kind::Akp815 => inverse_key_index(&self.kind, key),
-                Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxDK0108D => key,
-                _ => elgato_to_ajazz153(&self.kind, key),
+                Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => elgato_to_ajazz153(&self.kind, key),
+                _ => key,
             };
 
             let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
