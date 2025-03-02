@@ -275,7 +275,7 @@ impl StreamDeck {
                     // The thing is this device can slide the view then it shows 48, 49, 50 as a key input. It seems there is no device
                     // which has this function on this repo. So, as is, this function is dropped.
                     if key > self.kind.key_count() && self.kind == Kind::MiraBoxDK0108D {
-                        return Err(StreamDeckError::BadData);
+                        return Ok(StreamDeckInput::NoData);
                     }
 
                     states[(key + 1) as usize] = 0x1u8;
