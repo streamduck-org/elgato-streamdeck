@@ -187,7 +187,7 @@ pub fn read_encoder_input(kind: &Kind, data: &[u8]) -> Result<StreamDeckInput, S
     }
 }
 
-/// Read inputs from Ajazz AKP03
+/// Read inputs from Ajazz AKP03x
 pub fn ajazz03_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
     match input {
         (0..=6) | 0x25 | 0x30 | 0x31 => ajazz03_read_button_press(kind, input),
