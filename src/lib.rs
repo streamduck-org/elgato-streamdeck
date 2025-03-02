@@ -268,9 +268,13 @@ impl StreamDeck {
                 if data[9] != 0 {
                     let key = match self.kind {
                         Kind::Akp815 => inverse_key_index(&self.kind, data[9] - 1),
-                        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => elgato_to_ajazz153(&self.kind, data[9] - 1),
+                        Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => ajazz153_to_elgato_input(&self.kind, data[9] - 1),
                         _ => data[9] - 1
                     };
+
+                    if key > self.kind.key_count() && self.kind == Kind::MiraBoxDK0108D {
+                        return Err(StreamDeckError::BadData);
+                    }
 
                     states[(key + 1) as usize] = 0x1u8;
                 }
