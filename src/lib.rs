@@ -23,7 +23,7 @@ use image::{DynamicImage, ImageError};
 
 use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
-    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
+    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, filter_key_index, read_button_states, read_data,
     read_encoder_input, read_lcd_input, send_feature_report, write_data,
 };
 
@@ -268,6 +268,8 @@ impl StreamDeck {
                 if data[9] != 0 {
                     let key = if self.kind == Kind::Akp815 {
                         inverse_key_index(&self.kind, data[9] - 1)
+                    } else if self.kind == Kind::MiraBoxDK0108D {
+                        filter_key_index(&self.kind, data[9] - 1)
                     } else {
                         ajazz153_to_elgato_input(&self.kind, data[9] - 1)
                     };

@@ -106,6 +106,16 @@ pub fn inverse_key_index(kind: &Kind, key: u8) -> u8 {
     }
 }
 
+/// Filtered out when it exceeds keycount
+pub fn filter_key_index(kind: &Kind, key: u8) -> u8 {
+    if key > kind.key_count() {
+        println!("key {} - {}", kind.key_count(), key);
+        1
+    } else {
+        key
+    }
+}
+
 /// Flips key index horizontally, for use with Original v1 Stream Deck
 pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
     let col = key % kind.column_count();
