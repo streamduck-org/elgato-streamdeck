@@ -38,7 +38,6 @@ pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
 pub const PID_MIRABOX_DK0108D: u16 = 0x6667;
 
 /// A Mirabox vendor ID
-//pub const MIRABOX_VENDOR_ID_2: u16 = 0x6603;
 pub const MIRABOX_VENDOR_ID_2: u16 = 0x0300;
 
 /// Product ID of Ajazz AKP153E
