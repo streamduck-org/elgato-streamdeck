@@ -1044,7 +1044,7 @@ impl DeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.needs_mirabox_hack() {
                         if *their {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));
@@ -1070,7 +1070,7 @@ impl DeviceStateReader {
 
             StreamDeckInput::EncoderStateChange(encoders) => {
                 for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.needs_mirabox_hack() {
                         if *their {
                             updates.push(DeviceStateUpdate::EncoderDown(index as u8));
                             updates.push(DeviceStateUpdate::EncoderUp(index as u8));

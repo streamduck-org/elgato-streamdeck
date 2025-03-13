@@ -512,6 +512,14 @@ impl Kind {
         matches!(self, Kind::MiraBoxN3EN)
     }
 
+    /// Returns true for Mirabox devices NOT supporting button up AND button down events
+    pub fn needs_mirabox_hack(&self) -> bool {
+        matches!(
+            self,
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S | Kind::MiraBoxDK0108D | Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN
+        )
+    }
+
     /// Returns true for Mirabox devices
     pub fn is_mirabox(&self) -> bool {
         self.is_mirabox_v1() || self.is_mirabox_v2()
