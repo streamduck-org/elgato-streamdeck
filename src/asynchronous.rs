@@ -221,7 +221,7 @@ impl AsyncDeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && !self.device.kind.is_mirabox_v25() {
                         if *their {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));
