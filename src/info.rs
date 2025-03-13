@@ -38,6 +38,7 @@ pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
 pub const PID_MIRABOX_DK0108D: u16 = 0x6667;
 
 /// A Mirabox vendor ID
+//pub const MIRABOX_VENDOR_ID_2: u16 = 0x6603;
 pub const MIRABOX_VENDOR_ID_2: u16 = 0x0300;
 
 /// Product ID of Ajazz AKP153E
@@ -276,7 +277,7 @@ impl Kind {
         match self {
             Kind::Plus => Some((800, 100)),
             Kind::Neo => Some((248, 58)),
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => Some((854, 480)),
+            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S | Kind::MiraBoxN3EN => Some((854, 480)),
             Kind::Akp815 => Some((800, 480)),
             Kind::MiraBoxDK0108D => Some((800, 480)),
             _ => None,
@@ -347,7 +348,7 @@ impl Kind {
                 mirror: ImageMirroring::None,
             },
 
-            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R => ImageFormat {
+            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN => ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (60, 60),
                 rotation: ImageRotation::Rot0,
