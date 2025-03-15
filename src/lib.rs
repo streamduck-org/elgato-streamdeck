@@ -450,6 +450,11 @@ impl StreamDeck {
         if matches!(self.kind, Kind::Akp03 | Kind::Akp03E | Kind::Akp03R) && key >= 6 {
             return Ok(());
         }
+        
+        // MiraBoxM18 has 18 keys, but only the first 15 have screens, so don't output anything for keys 16, 17, 18
+        if matches!(self.kind, Kind::MiraBoxM18) && key >= 15 {
+            return Ok(());
+        }
 
         let cache_entry = ImageCache {
             key,
