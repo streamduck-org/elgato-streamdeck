@@ -77,6 +77,15 @@ pub fn extract_str(bytes: &[u8]) -> Result<String, Utf8Error> {
  | 03 | 02 | 01 |
   --------------
 
+ MiraBoxM18's key index
+--------------------------
+| 01 | 02 | 03 | 04 | 05 |
+|----|----|----|----|----|
+| 06 | 07 | 08 | 09 | 10 |
+|----|----|----|----|----|
+| 11 | 12 | 13 | 14 | 15 |
+|----|----|----|----|----|
+|      37 | 48 | 49      |
 */
 
 /// Converts Elgato key index to Ajazz key index
@@ -92,9 +101,24 @@ pub fn elgato_to_ajazz153(kind: &Kind, key: u8) -> u8 {
 pub fn ajazz153_to_elgato_input(kind: &Kind, key: u8) -> u8 {
     if key < kind.key_count() {
         [4, 10, 16, 3, 9, 15, 2, 8, 14, 1, 7, 13, 0, 6, 12, 5, 11, 17][key as usize]
-    } else {
-        key
+            } else {
+                key
     }
+}
+
+/// Converts MiraBoxM18 key index to Elgato key index
+pub fn miraboxm18_to_elgato_input(_kind: &Kind, key: u8) -> u8 {
+    let result = if key < 15 {
+        key
+    } else {
+        match key {
+            36 => 15,
+            47 => 16,
+            48 => 17,
+            _ => key,
+        }
+    };
+    result
 }
 
 /// Make last key index first, and first key index last
@@ -110,6 +134,18 @@ pub fn inverse_key_index(kind: &Kind, key: u8) -> u8 {
 pub fn flip_key_index(kind: &Kind, key: u8) -> u8 {
     let col = key % kind.column_count();
     (key - col) + ((kind.column_count() - 1) - col)
+}
+
+/// Flips key index vertically, reverses rows top to bottom. for MiraBoxM18
+pub fn flip_key_index_vertical(kind: &Kind, key: u8) -> u8 {
+    let col = key % kind.column_count();
+    let row = key / kind.column_count();
+    if kind.row_count() == 0 || row >= kind.row_count() {
+        return key; 
+    }
+    let new_row = (kind.row_count() - 1) - row;
+    let result = (new_row * kind.column_count()) + col;
+    result
 }
 
 /// Extends buffer up to required packet length
@@ -252,4 +288,15 @@ fn ajazz03_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput,
 
     encoder_states[encoder] = true;
     Ok(StreamDeckInput::EncoderStateChange(encoder_states))
+}
+
+/// Reads MiraBoxM18 input. Keys only.
+pub fn miraboxm18_read_input(kind: &Kind, input: u8, pressed: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let converted = miraboxm18_to_elgato_input(kind, input - 1);
+    
+    let mut button_states = vec![0; (kind.key_count() + 1) as usize];
+    button_states[0] = 1; 
+    button_states[converted as usize + 1] = pressed; 
+    
+    Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)))
 }

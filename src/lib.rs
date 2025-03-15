@@ -23,7 +23,7 @@ use image::{DynamicImage, ImageError};
 
 use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
-    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
+    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, miraboxm18_read_input, elgato_to_ajazz153, extract_str, flip_key_index, flip_key_index_vertical, get_feature_report, inverse_key_index, read_button_states, read_data,
     read_encoder_input, read_lcd_input, send_feature_report, write_data,
 };
 
@@ -291,8 +291,10 @@ impl StreamDeck {
                 if data[0] == 0 {
                     return Ok(StreamDeckInput::NoData);
                 }
-
-                ajazz03_read_input(&self.kind, data[9])
+                match self.kind {
+                    Kind::MiraBoxM18 => miraboxm18_read_input(&self.kind, data[9], data[10]),
+                    _ => ajazz03_read_input(&self.kind, data[9]),
+                }
             }
 
             _ => {
@@ -383,6 +385,8 @@ impl StreamDeck {
             elgato_to_ajazz153(&self.kind, key)
         } else if let Kind::Akp815 = self.kind {
             inverse_key_index(&self.kind, key)
+        } else if let Kind::MiraBoxM18 = self.kind {
+            flip_key_index_vertical(&self.kind, key)
         } else {
             key
         };
@@ -444,6 +448,11 @@ impl StreamDeck {
     pub fn write_image(&self, key: u8, image_data: &[u8]) -> Result<(), StreamDeckError> {
         // Key count is 9 for AKP03x, but only the first 6 (0-5) have screens, so don't output anything for keys 6, 7, 8
         if matches!(self.kind, Kind::Akp03 | Kind::Akp03E | Kind::Akp03R) && key >= 6 {
+            return Ok(());
+        }
+        
+        // MiraBoxM18 has 18 keys, but only the first 15 have screens, so don't output anything for keys 16, 17, 18
+        if matches!(self.kind, Kind::MiraBoxM18) && key >= 15 {
             return Ok(());
         }
 
@@ -571,6 +580,7 @@ impl StreamDeck {
             let key = match self.kind {
                 Kind::Akp815 => inverse_key_index(&self.kind, key),
                 Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => elgato_to_ajazz153(&self.kind, key),
+                Kind::MiraBoxM18 => flip_key_index_vertical(&self.kind, key),
                 _ => key,
             };
 
@@ -1044,7 +1054,7 @@ impl DeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && self.device.kind != Kind::MiraBoxM18 { // At least mirabox m18 can correctly report button down/up states
                         if *their {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));
