@@ -24,7 +24,7 @@ use image::{DynamicImage, ImageError};
 use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
     ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
-    read_encoder_input, read_lcd_input, send_feature_report, write_data,
+    read_encoder_input, read_lcd_input, send_feature_report, write_data, mirabox_e3en_read_input,
 };
 
 /// Various information about Stream Deck devices
@@ -283,6 +283,16 @@ impl StreamDeck {
                 }
 
                 Ok(StreamDeckInput::ButtonStateChange(read_button_states(&self.kind, &states)))
+            }
+
+            Kind::MiraBoxN3EN => {
+                let data = read_data(&self.device, 512, timeout)?;
+
+                if data[0] == 0 {
+                    return Ok(StreamDeckInput::NoData);
+                }
+
+                mirabox_e3en_read_input(&self.kind, data[9], data[10])
             }
 
             kind if kind.is_mirabox_v2() => {
@@ -1044,7 +1054,7 @@ impl DeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && self.device.kind != Kind::MiraBoxN3EN {
                         if *their {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));
@@ -1070,7 +1080,7 @@ impl DeviceStateReader {
 
             StreamDeckInput::EncoderStateChange(encoders) => {
                 for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && self.device.kind != Kind::MiraBoxN3EN {
                         if *their {
                             updates.push(DeviceStateUpdate::EncoderDown(index as u8));
                             updates.push(DeviceStateUpdate::EncoderUp(index as u8));
