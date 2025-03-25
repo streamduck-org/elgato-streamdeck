@@ -347,10 +347,17 @@ impl Kind {
                 mirror: ImageMirroring::None,
             },
 
-            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN => ImageFormat {
+            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R => ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (60, 60),
                 rotation: ImageRotation::Rot0,
+                mirror: ImageMirroring::None,
+            },
+
+            Kind::MiraBoxN3EN => ImageFormat {
+                mode: ImageMode::JPEG,
+                size: (60, 60),
+                rotation: ImageRotation::Rot90,
                 mirror: ImageMirroring::None,
             },
 
