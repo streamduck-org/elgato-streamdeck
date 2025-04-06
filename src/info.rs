@@ -55,7 +55,7 @@ pub const PID_AJAZZ_AKP03E: u16 = 0x3002;
 /// Product ID of Ajazz AKP03R
 pub const PID_AJAZZ_AKP03R: u16 = 0x1003;
 
-/// Vendor ID for mirabox n3
+/// A Mirabox vendor ID
 pub const MIRABOX_VENDOR_ID_3: u16 = 0x6603;
 
 /// Product ID of Mirabox N3EN
