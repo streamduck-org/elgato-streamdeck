@@ -395,6 +395,11 @@ impl StreamDeck {
         }
 
         if self.kind.is_mirabox() {
+            let padding = match self.kind {
+                Kind::Akp05EB => 6,
+                _ => 1,
+            };
+
             let mut buf = vec![
                 0x00,
                 0x43,
@@ -409,7 +414,7 @@ impl StreamDeck {
                 0x00,
                 (image_data.len() >> 8) as u8,
                 image_data.len() as u8,
-                key + 1,
+                key + padding,
             ];
 
             mirabox_extend_packet(&self.kind, &mut buf);
