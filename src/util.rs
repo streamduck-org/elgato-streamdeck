@@ -253,3 +253,70 @@ fn ajazz03_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput,
     encoder_states[encoder] = true;
     Ok(StreamDeckInput::EncoderStateChange(encoder_states))
 }
+
+/// Read inputs from Ajazz AKP05x
+pub fn ajazz05_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    match input {
+        (0..=10) => ajazz05_read_button_press(kind, input),
+        0xa0 | 0xa1 | 0x50 | 0x51 | 0x90 | 0x91 | 0x70 | 0x71 => ajazz05_read_encoder_value(kind, input),
+        0x33 | 0x35 | 0x36 | 0x37 => ajazz05_read_encoder_press(kind, input),
+        _ => Err(StreamDeckError::BadData),
+    }
+}
+
+fn ajazz05_read_button_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let mut button_states = vec![0x01];
+    button_states.extend(vec![0u8; (kind.key_count() + 1) as usize]);
+
+    if input == 0 {
+        return Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)));
+    }
+
+    let pressed_index: usize = match input {
+        // Six buttons with displays
+        (1..=10) => input as usize,
+        _ => return Err(StreamDeckError::BadData),
+    };
+
+    button_states[pressed_index] = 0x1u8;
+
+    Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)))
+}
+
+fn ajazz05_read_encoder_value(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let mut encoder_values = vec![0i8; kind.encoder_count() as usize];
+
+    let (encoder, value): (usize, i8) = match input {
+        // Left encoder
+        0xa0 => (0, -1),
+        0xa1 => (0, 1),
+        // Left Middle  encoder
+        0x50 => (1, -1),
+        0x51 => (1, 1),
+        // Right Middle  encoder
+        0x90 => (2, -1),
+        0x91 => (2, 1),
+        // Right encoder
+        0x70 => (3, -1),
+        0x71 => (3, 1),
+        _ => return Err(StreamDeckError::BadData),
+    };
+
+    encoder_values[encoder] = value;
+    Ok(StreamDeckInput::EncoderTwist(encoder_values))
+}
+
+fn ajazz05_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let mut encoder_states = vec![false; kind.encoder_count() as usize];
+
+    let encoder: usize = match input {
+        0x37 => 0, // Left encoder
+        0x35 => 1, // Left middle encoder
+        0x33 => 2, // Right middle encoder
+        0x36 => 3, // Right encoder
+        _ => return Err(StreamDeckError::BadData),
+    };
+
+    encoder_states[encoder] = true;
+    Ok(StreamDeckInput::EncoderStateChange(encoder_states))
+}
