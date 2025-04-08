@@ -290,7 +290,7 @@ impl Kind {
             Kind::Neo => Some((248, 58)),
             Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => Some((854, 480)),
             Kind::Akp815 => Some((800, 480)),
-            Kind::Akp05EB => Some((800, 480)),
+            Kind::Akp05EB => Some((800, 100)),
             Kind::MiraBoxDK0108D => Some((800, 480)),
             _ => None,
         }
@@ -400,6 +400,12 @@ impl Kind {
                 mirror: ImageMirroring::None,
             }),
             Kind::Plus => Some(ImageFormat {
+                mode: ImageMode::JPEG,
+                size: (800, 100),
+                rotation: ImageRotation::Rot0,
+                mirror: ImageMirroring::None,
+            }),
+            Kind::Akp05EB => Some(ImageFormat {
                 mode: ImageMode::JPEG,
                 size: (800, 100),
                 rotation: ImageRotation::Rot0,

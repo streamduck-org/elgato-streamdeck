@@ -260,6 +260,7 @@ pub fn ajazz05_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, Str
         (0..=10) => ajazz05_read_button_press(kind, input),
         0xa0 | 0xa1 | 0x50 | 0x51 | 0x90 | 0x91 | 0x70 | 0x71 => ajazz05_read_encoder_value(kind, input),
         0x33 | 0x35 | 0x36 | 0x37 => ajazz05_read_encoder_press(kind, input),
+        0x38 | 0x39 | 0x40 | 0x41 | 0x42 | 0x43 => ajazz05_read_screen_press(kind, input),
         _ => Err(StreamDeckError::BadData),
     }
 }
@@ -319,4 +320,8 @@ fn ajazz05_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput,
 
     encoder_states[encoder] = true;
     Ok(StreamDeckInput::EncoderStateChange(encoder_states))
+}
+
+fn ajazz05_read_screen_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    Ok(StreamDeckInput::NoData)
 }
