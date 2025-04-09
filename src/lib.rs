@@ -395,6 +395,16 @@ impl StreamDeck {
         }
 
         if self.kind.is_mirabox() {
+            let key = if let Kind::Akp05EB = self.kind {
+                if key >= 5 {
+                    key - 5
+                } else {
+                    key + 5
+                }
+            } else {
+                key
+            };
+
             let padding = match self.kind {
                 Kind::Akp05EB => 6,
                 _ => 1,
@@ -566,6 +576,33 @@ impl StreamDeck {
                 )
             }
 
+            Kind::Akp05EB => {
+                let (w, h) = self.kind.lcd_strip_size().unwrap();
+                let mut buf = vec![
+                    0x00,
+                    0x43,
+                    0x52,
+                    0x54,
+                    0x00,
+                    0x00,
+                    0x42,
+                    0x41,
+                    0x54,
+                    0x00,
+                    0x00,
+                    (image_data.len() >> 8) as u8,
+                    image_data.len() as u8,
+                    1,
+                ];
+
+                mirabox_extend_packet(&self.kind, &mut buf);
+
+                write_data(&self.device, buf.as_slice())?;
+                self.write_image_data_reports(image_data, WriteImageParameters::for_key(self.kind, image_data.len()), |page_number, this_length, last_package| {
+                    vec![0x00]
+                })
+            }
+
             _ => Err(StreamDeckError::UnsupportedOperation),
         }
     }
@@ -582,7 +619,7 @@ impl StreamDeck {
                 _ => key,
             };
 
-            let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
+            let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 6 }];
 
             mirabox_extend_packet(&self.kind, &mut buf);
 
