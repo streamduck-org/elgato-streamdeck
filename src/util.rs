@@ -187,22 +187,12 @@ pub fn read_encoder_input(kind: &Kind, data: &[u8]) -> Result<StreamDeckInput, S
     }
 }
 
-/// Read inputs from MiraBox N3EN
-pub fn mirabox_n3en_read_input(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
+/// Read inputs from Ajazz AKP03x and MiraBox N3 devices
+pub fn ajazz03_read_input(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     match input {
         (0..=6) | 0x25 | 0x30 | 0x31 => ajazz03_read_button_press(kind, input, state),
         0x90 | 0x91 | 0x50 | 0x51 | 0x60 | 0x61 => ajazz03_read_encoder_value(kind, input),
         0x33..=0x35 => ajazz03_read_encoder_press(kind, input, state),
-        _ => Err(StreamDeckError::BadData),
-    }
-}
-
-/// Read inputs from Ajazz AKP03x
-pub fn ajazz03_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
-    match input {
-        (0..=6) | 0x25 | 0x30 | 0x31 => ajazz03_read_button_press(kind, input, 0x01),
-        0x90 | 0x91 | 0x50 | 0x51 | 0x60 | 0x61 => ajazz03_read_encoder_value(kind, input),
-        0x33..=0x35 => ajazz03_read_encoder_press(kind, input, 0x01),
         _ => Err(StreamDeckError::BadData),
     }
 }
