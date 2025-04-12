@@ -58,7 +58,8 @@ pub const PID_AJAZZ_AKP03R: u16 = 0x1003;
 /// A Mirabox vendor ID
 pub const MIRABOX_VENDOR_ID_3: u16 = 0x6603;
 
-/// Product ID of Mirabox N3EN
+/// Product ID of the "FHOOU" (front label) and "MiraBox N3" (rear label) and "MiraBox N3EN" as per the mirabox repository.
+/// Seems just like an AKP03.
 pub const PID_MIRABOX_N3EN: u16 = 0x1003;
 
 const RECOGNIZED_VENDORS: [u16; 4] = [ELGATO_VENDOR_ID, MIRABOX_VENDOR_ID_1, MIRABOX_VENDOR_ID_2, MIRABOX_VENDOR_ID_3];
