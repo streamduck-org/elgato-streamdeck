@@ -24,7 +24,7 @@ use image::{DynamicImage, ImageError};
 use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
     ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
-    read_encoder_input, read_lcd_input, send_feature_report, write_data, mirabox_e3en_read_input,
+    read_encoder_input, read_lcd_input, send_feature_report, write_data, mirabox_n3en_read_input,
 };
 
 /// Various information about Stream Deck devices
@@ -292,7 +292,7 @@ impl StreamDeck {
                     return Ok(StreamDeckInput::NoData);
                 }
 
-                mirabox_e3en_read_input(&self.kind, data[9], data[10])
+                mirabox_n3en_read_input(&self.kind, data[9], data[10])
             }
 
             kind if kind.is_mirabox_v2() => {

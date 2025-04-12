@@ -187,17 +187,17 @@ pub fn read_encoder_input(kind: &Kind, data: &[u8]) -> Result<StreamDeckInput, S
     }
 }
 
-/// Read inputs from MiraBox E3EN
-pub fn mirabox_e3en_read_input(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
+/// Read inputs from MiraBox N3EN
+pub fn mirabox_n3en_read_input(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     match input {
-        (0..=6) | 0x25 | 0x30 | 0x31 => mirabox_e3en_read_button_press(kind, input, state),
+        (0..=6) | 0x25 | 0x30 | 0x31 => mirabox_n3en_read_button_press(kind, input, state),
         0x90 | 0x91 | 0x50 | 0x51 | 0x60 | 0x61 => ajazz03_read_encoder_value(kind, input),
-        0x33..=0x35 => mirabox_e3en_read_encoder_press(kind, input, state),
+        0x33..=0x35 => mirabox_n3en_read_encoder_press(kind, input, state),
         _ => Err(StreamDeckError::BadData),
     }
 }
 
-fn mirabox_e3en_read_button_press(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
+fn mirabox_n3en_read_button_press(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     let mut button_states = vec![0x01];
     button_states.extend(vec![0u8; (kind.key_count() + 1) as usize]);
 
@@ -220,7 +220,7 @@ fn mirabox_e3en_read_button_press(kind: &Kind, input: u8, state: u8) -> Result<S
     Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)))
 }
 
-fn mirabox_e3en_read_encoder_press(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
+fn mirabox_n3en_read_encoder_press(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     let mut encoder_states = vec![false; kind.encoder_count() as usize];
 
     let encoder: usize = match input {
