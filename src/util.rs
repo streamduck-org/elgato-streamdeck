@@ -322,6 +322,15 @@ fn ajazz05_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput,
     Ok(StreamDeckInput::EncoderStateChange(encoder_states))
 }
 
-fn ajazz05_read_screen_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
-    Ok(StreamDeckInput::NoData)
+fn ajazz05_read_screen_press(_kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+    let start_x: u16 = match input {
+        0x38 => return Ok(StreamDeckInput::TouchScreenSwipe((0, 0), (800, 0))),
+        0x39 => return Ok(StreamDeckInput::TouchScreenSwipe((800, 0), (0, 0))),
+        0x40 => 0,
+        0x41 => 200,
+        0x42 => 400,
+        0x43 => 600,
+        _ => return Err(StreamDeckError::BadData),
+    };
+    Ok(StreamDeckInput::TouchScreenPress(start_x, 0))
 }
