@@ -57,11 +57,11 @@ pub fn refresh_device_list(hidapi: &mut HidApi) -> HidResult<()> {
 /// Returns a list of devices as (Kind, Serial Number) that could be found using HidApi.
 ///
 /// **WARNING:** To refresh the list, use [refresh_device_list]
-pub fn list_devices(hidapi: &HidApi) -> Vec<(Kind, String)> {
+pub fn list_devices(hidapi: &HidApi, only_elgato: bool) -> Vec<(Kind, String)> {
     hidapi
         .device_list()
         .filter_map(|d| {
-            if !is_vendor_familiar(&d.vendor_id()) {
+            if d.vendor_id() != info::ELGATO_VENDOR_ID || !only_elgato && !is_vendor_familiar(&d.vendor_id()) {
                 return None;
             }
 

@@ -63,7 +63,7 @@ if device.updated {
 - [x] Reading buttons with async
 
 ## Supported Devices
-As it stands, this library should support the following devices:
+As it stands, this library should support the following devices. Please note that non-Elgato devices are only supported by consumers of this library that enable the support for them.
 - Stream Deck Original
 - Stream Deck Original V2
 - Stream Deck XL
