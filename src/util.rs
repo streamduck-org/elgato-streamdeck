@@ -187,17 +187,17 @@ pub fn read_encoder_input(kind: &Kind, data: &[u8]) -> Result<StreamDeckInput, S
     }
 }
 
-/// Read inputs from Ajazz AKP03x
-pub fn ajazz03_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+/// Read inputs from Ajazz AKP03x and MiraBox N3 devices
+pub fn ajazz03_read_input(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     match input {
-        (0..=6) | 0x25 | 0x30 | 0x31 => ajazz03_read_button_press(kind, input),
+        (0..=6) | 0x25 | 0x30 | 0x31 => ajazz03_read_button_press(kind, input, state),
         0x90 | 0x91 | 0x50 | 0x51 | 0x60 | 0x61 => ajazz03_read_encoder_value(kind, input),
-        0x33..=0x35 => ajazz03_read_encoder_press(kind, input),
+        0x33..=0x35 => ajazz03_read_encoder_press(kind, input, state),
         _ => Err(StreamDeckError::BadData),
     }
 }
 
-fn ajazz03_read_button_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+fn ajazz03_read_button_press(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     let mut button_states = vec![0x01];
     button_states.extend(vec![0u8; (kind.key_count() + 1) as usize]);
 
@@ -215,7 +215,7 @@ fn ajazz03_read_button_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, 
         _ => return Err(StreamDeckError::BadData),
     };
 
-    button_states[pressed_index] = 0x1u8;
+    button_states[pressed_index] = state;
 
     Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)))
 }
@@ -240,7 +240,7 @@ fn ajazz03_read_encoder_value(kind: &Kind, input: u8) -> Result<StreamDeckInput,
     Ok(StreamDeckInput::EncoderTwist(encoder_values))
 }
 
-fn ajazz03_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+fn ajazz03_read_encoder_press(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     let mut encoder_states = vec![false; kind.encoder_count() as usize];
 
     let encoder: usize = match input {
@@ -250,6 +250,6 @@ fn ajazz03_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput,
         _ => return Err(StreamDeckError::BadData),
     };
 
-    encoder_states[encoder] = true;
+    encoder_states[encoder] = state != 0;
     Ok(StreamDeckInput::EncoderStateChange(encoder_states))
 }

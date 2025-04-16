@@ -292,7 +292,12 @@ impl StreamDeck {
                     return Ok(StreamDeckInput::NoData);
                 }
 
-                ajazz03_read_input(&self.kind, data[9])
+                if self.kind == Kind::MiraBoxN3EN {
+                    ajazz03_read_input(&self.kind, data[9], data[10])
+                } else {
+                    // Devices not returning a state for the input
+                    ajazz03_read_input(&self.kind, data[9], 0x01)
+                }
             }
 
             _ => {
@@ -1044,7 +1049,7 @@ impl DeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && self.device.kind != Kind::MiraBoxN3EN {
                         if *their {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));
@@ -1070,7 +1075,7 @@ impl DeviceStateReader {
 
             StreamDeckInput::EncoderStateChange(encoders) => {
                 for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && self.device.kind != Kind::MiraBoxN3EN {
                         if *their {
                             updates.push(DeviceStateUpdate::EncoderDown(index as u8));
                             updates.push(DeviceStateUpdate::EncoderUp(index as u8));
