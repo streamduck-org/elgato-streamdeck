@@ -23,8 +23,8 @@ pub fn refresh_device_list_async(hidapi: &mut HidApi) -> HidResult<()> {
 /// can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
 ///
 /// **WARNING:** To refresh the list, use [refresh_device_list]
-pub fn list_devices_async(hidapi: &HidApi) -> Vec<(Kind, String)> {
-    block_in_place(move || list_devices(hidapi))
+pub fn list_devices_async(hidapi: &HidApi, only_elgato: bool) -> Vec<(Kind, String)> {
+    block_in_place(move || list_devices(hidapi, only_elgato))
 }
 
 /// Stream Deck interface suitable to be used in async, uses [block_in_place](block_in_place)
