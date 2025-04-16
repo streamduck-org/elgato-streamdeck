@@ -23,8 +23,8 @@ use image::{DynamicImage, ImageError};
 
 use crate::info::{is_vendor_familiar, Kind};
 use crate::util::{
-    ajazz03_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index, read_button_states, read_data,
-    read_encoder_input, read_lcd_input, send_feature_report, write_data,
+    ajazz03_read_input, ajazz05_read_input, mirabox_extend_packet, ajazz153_to_elgato_input, elgato_to_ajazz153, extract_str, flip_key_index, get_feature_report, inverse_key_index,
+    read_button_states, read_data, read_encoder_input, read_lcd_input, send_feature_report, write_data,
 };
 
 /// Various information about Stream Deck devices
@@ -292,7 +292,10 @@ impl StreamDeck {
                     return Ok(StreamDeckInput::NoData);
                 }
 
-                ajazz03_read_input(&self.kind, data[9])
+                match self.kind {
+                    Kind::Akp05E => ajazz05_read_input(&self.kind, data[9], data[10]),
+                    _ => ajazz03_read_input(&self.kind, data[9]),
+                }
             }
 
             _ => {
@@ -392,6 +395,21 @@ impl StreamDeck {
         }
 
         if self.kind.is_mirabox() {
+            let key = if let Kind::Akp05E = self.kind {
+                if key >= 5 {
+                    key - 5
+                } else {
+                    key + 5
+                }
+            } else {
+                key
+            };
+
+            let padding = match self.kind {
+                Kind::Akp05E => 6,
+                _ => 1,
+            };
+
             let mut buf = vec![
                 0x00,
                 0x43,
@@ -406,7 +424,7 @@ impl StreamDeck {
                 0x00,
                 (image_data.len() >> 8) as u8,
                 image_data.len() as u8,
-                key + 1,
+                key + padding,
             ];
 
             mirabox_extend_packet(&self.kind, &mut buf);
@@ -463,36 +481,67 @@ impl StreamDeck {
         self.initialize()?;
         match self.kind {
             Kind::Plus => (),
+            Kind::Akp05E => (),
             _ => return Err(StreamDeckError::UnsupportedOperation),
         }
 
-        self.write_image_data_reports(
-            rect.data.as_slice(),
-            WriteImageParameters {
-                image_report_length: 1024,
-                image_report_payload_length: 1024 - 16,
-            },
-            |page_number, this_length, last_package| {
-                vec![
-                    0x02,
-                    0x0c,
-                    (x & 0xff) as u8,
-                    (x >> 8) as u8,
-                    (y & 0xff) as u8,
-                    (y >> 8) as u8,
-                    (rect.w & 0xff) as u8,
-                    (rect.w >> 8) as u8,
-                    (rect.h & 0xff) as u8,
-                    (rect.h >> 8) as u8,
-                    if last_package { 1 } else { 0 },
-                    (page_number & 0xff) as u8,
-                    (page_number >> 8) as u8,
-                    (this_length & 0xff) as u8,
-                    (this_length >> 8) as u8,
-                    0,
-                ]
-            },
-        )
+        match self.kind {
+            Kind::Plus => self.write_image_data_reports(
+                rect.data.as_slice(),
+                WriteImageParameters {
+                    image_report_length: 1024,
+                    image_report_payload_length: 1024 - 16,
+                },
+                |page_number, this_length, last_package| {
+                    vec![
+                        0x02,
+                        0x0c,
+                        (x & 0xff) as u8,
+                        (x >> 8) as u8,
+                        (y & 0xff) as u8,
+                        (y >> 8) as u8,
+                        (rect.w & 0xff) as u8,
+                        (rect.w >> 8) as u8,
+                        (rect.h & 0xff) as u8,
+                        (rect.h >> 8) as u8,
+                        if last_package { 1 } else { 0 },
+                        (page_number & 0xff) as u8,
+                        (page_number >> 8) as u8,
+                        (this_length & 0xff) as u8,
+                        (this_length >> 8) as u8,
+                    ]
+                },
+            ),
+
+            Kind::Akp05E => {
+                let index: u16 = (x / 200) + 1;
+                let mut buf = vec![
+                    0x00,
+                    0x43,
+                    0x52,
+                    0x54,
+                    0x00,
+                    0x00,
+                    0x42,
+                    0x41,
+                    0x54,
+                    0x00,
+                    0x00,
+                    (rect.data.len() >> 8) as u8,
+                    rect.data.len() as u8,
+                    index as u8,
+                ];
+                mirabox_extend_packet(&self.kind, &mut buf);
+
+                write_data(&self.device, buf.as_slice())?;
+                self.write_image_data_reports(
+                    rect.data.as_slice(),
+                    WriteImageParameters::for_key(self.kind, rect.data.len()),
+                    |page_number, this_length, last_package| vec![0x00],
+                )
+            }
+            _ => return Err(StreamDeckError::UnsupportedOperation),
+        }
     }
 
     /// Writes image data to Stream Deck device's lcd strip/screen as full fill
@@ -558,6 +607,34 @@ impl StreamDeck {
                 )
             }
 
+            //broken for now, only the halfbottom is displayed
+            Kind::Akp05E => {
+                let (w, h) = self.kind.lcd_strip_size().unwrap();
+                let mut buf = vec![
+                    0x00,
+                    0x43,
+                    0x52,
+                    0x54,
+                    0x00,
+                    0x00,
+                    0x42,
+                    0x41,
+                    0x54,
+                    0x00,
+                    0x00,
+                    (image_data.len() >> 8) as u8,
+                    image_data.len() as u8,
+                    1,
+                ];
+
+                mirabox_extend_packet(&self.kind, &mut buf);
+
+                write_data(&self.device, buf.as_slice())?;
+                self.write_image_data_reports(image_data, WriteImageParameters::for_key(self.kind, image_data.len()), |page_number, this_length, last_package| {
+                    vec![0x00]
+                })
+            }
+
             _ => Err(StreamDeckError::UnsupportedOperation),
         }
     }
@@ -574,7 +651,7 @@ impl StreamDeck {
                 _ => key,
             };
 
-            let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 1 }];
+            let mut buf = vec![0x00, 0x43, 0x52, 0x54, 0x00, 0x00, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, if key == 0xff { 0xff } else { key + 6 }];
 
             mirabox_extend_packet(&self.kind, &mut buf);
 
@@ -1044,7 +1121,7 @@ impl DeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && self.device.kind != Kind::Akp05E {
                         if *their {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));
