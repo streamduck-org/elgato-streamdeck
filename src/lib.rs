@@ -293,7 +293,7 @@ impl StreamDeck {
                 }
 
                 match self.kind {
-                    Kind::Akp05E => ajazz05_read_input(&self.kind, data[9]),
+                    Kind::Akp05E => ajazz05_read_input(&self.kind, data[9], data[10]),
                     _ => ajazz03_read_input(&self.kind, data[9]),
                 }
             }
@@ -1121,7 +1121,7 @@ impl DeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() {
+                    if self.device.kind.is_mirabox() && self.device.kind != Kind::Akp05E {
                         if *their {
                             updates.push(DeviceStateUpdate::ButtonDown(index as u8));
                             updates.push(DeviceStateUpdate::ButtonUp(index as u8));

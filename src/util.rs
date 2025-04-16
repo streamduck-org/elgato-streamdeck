@@ -255,9 +255,9 @@ fn ajazz03_read_encoder_press(kind: &Kind, input: u8) -> Result<StreamDeckInput,
 }
 
 /// Read inputs from Ajazz AKP05x
-pub fn ajazz05_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+pub fn ajazz05_read_input(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     match input {
-        (0..=10) => ajazz05_read_button_press(kind, input),
+        (0..=10) => ajazz05_read_button_press(kind, input, state),
         0xa0 | 0xa1 | 0x50 | 0x51 | 0x90 | 0x91 | 0x70 | 0x71 => ajazz05_read_encoder_value(kind, input),
         0x33 | 0x35 | 0x36 | 0x37 => ajazz05_read_encoder_press(kind, input),
         0x38 | 0x39 | 0x40 | 0x41 | 0x42 | 0x43 => ajazz05_read_screen_press(kind, input),
@@ -265,7 +265,7 @@ pub fn ajazz05_read_input(kind: &Kind, input: u8) -> Result<StreamDeckInput, Str
     }
 }
 
-fn ajazz05_read_button_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, StreamDeckError> {
+fn ajazz05_read_button_press(kind: &Kind, input: u8, state: u8) -> Result<StreamDeckInput, StreamDeckError> {
     let mut button_states = vec![0x01];
     button_states.extend(vec![0u8; (kind.key_count() + 1) as usize]);
 
@@ -279,7 +279,7 @@ fn ajazz05_read_button_press(kind: &Kind, input: u8) -> Result<StreamDeckInput, 
         _ => return Err(StreamDeckError::BadData),
     };
 
-    button_states[pressed_index] = 0x1u8;
+    button_states[pressed_index] = state;
 
     Ok(StreamDeckInput::ButtonStateChange(read_button_states(kind, &button_states)))
 }
