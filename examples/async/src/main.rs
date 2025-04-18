@@ -11,7 +11,7 @@ async fn main() {
     match new_hidapi() {
         Ok(hid) => {
             // Refresh device list
-            for (kind, serial) in list_devices(&hid) {
+            for (kind, serial) in list_devices(&hid, false) {
                 println!("{:?} {} {}", kind, serial, kind.product_id());
 
                 // Connect to the device
@@ -21,7 +21,7 @@ async fn main() {
 
                 device.set_brightness(50).await.unwrap();
                 device.clear_all_button_images().await.unwrap();
-                
+
                 // Use image-rs to load an image
                 let image = open("no-place-like-localhost.jpg").unwrap();
                 let alternative = image.grayscale().brighten(-50);
@@ -44,7 +44,7 @@ async fn main() {
                     let converted_image = convert_image_with_format(format, scaled_image).unwrap();
                     let _ = device.write_lcd_fill(&converted_image).await;
                 }
-                
+
                 let small = match device.kind().lcd_strip_size() {
                     Some((w, h)) => {
                         let min = w.min(h) as u32;
@@ -56,7 +56,7 @@ async fn main() {
 
                 // Flush
                 device.flush().await.unwrap();
-                
+
                 // Start new task to animate the button images
                 let device_clone = device.clone();
                 tokio::spawn(async move {
@@ -66,20 +66,20 @@ async fn main() {
                     loop {
                         device_clone.set_button_image(index, image.clone()).await.unwrap();
                         device_clone.set_button_image(previous, alternative.clone()).await.unwrap();
-                        
+
                         device_clone.flush().await.unwrap();
-                        
+
                         sleep(Duration::from_secs_f32(0.5)).await;
 
                         previous = index;
-                        
+
                         index += 1;
                         if index >= kind.key_count() as u8 {
                             index = 0;
                         }
                     }
                 });
-                
+
                 let reader = device.get_reader();
 
                 'infinite: loop {
@@ -121,11 +121,11 @@ async fn main() {
                                     device.write_lcd(x, y, small).await.unwrap();
                                 }
                             }
-                            
+
                             DeviceStateUpdate::TouchScreenLongPress(x, y) => {
                                 println!("Touch Screen long press at {x}, {y}")
                             }
-                            
+
                             DeviceStateUpdate::TouchScreenSwipe((sx, sy), (ex, ey)) => {
                                 println!("Touch Screen swipe from {sx}, {sy} to {ex}, {ey}")
                             }
