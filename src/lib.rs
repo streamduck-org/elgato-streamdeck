@@ -815,7 +815,7 @@ impl StreamDeck {
     pub fn flush(&self) -> Result<(), StreamDeckError> {
         self.initialize()?;
 
-        if self.image_cache.write()?.len() == 0 {
+        if self.image_cache.write()?.is_empty() {
             return Ok(());
         }
 
