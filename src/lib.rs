@@ -61,7 +61,7 @@ pub fn list_devices(hidapi: &HidApi, only_elgato: bool) -> Vec<(Kind, String)> {
     hidapi
         .device_list()
         .filter_map(|d| {
-            if d.vendor_id() != info::ELGATO_VENDOR_ID || !only_elgato && !is_vendor_familiar(&d.vendor_id()) {
+            if (only_elgato && d.vendor_id() != info::ELGATO_VENDOR_ID) || !is_vendor_familiar(&d.vendor_id()) {
                 return None;
             }
 

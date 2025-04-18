@@ -11,7 +11,7 @@ fn main() {
     match new_hidapi() {
         Ok(hid) => {
             // Refresh device list
-            for (kind, serial) in list_devices(&hid) {
+            for (kind, serial) in list_devices(&hid, false) {
                 println!("{:?} {} {}", kind, serial, kind.product_id());
 
                 // Connect to the device
@@ -42,7 +42,7 @@ fn main() {
                     let converted_image = convert_image_with_format(format, scaled_image).unwrap();
                     let _ = device.write_lcd_fill(&converted_image);
                 }
-                
+
                 let small = match device.kind().lcd_strip_size() {
                     Some((w, h)) => {
                         let min = w.min(h) as u32;
@@ -98,11 +98,11 @@ fn main() {
                                         device.write_lcd(x, y, small).unwrap();
                                     }
                                 }
-                                
+
                                 DeviceStateUpdate::TouchScreenLongPress(x, y) => {
                                     println!("Touch Screen long press at {x}, {y}")
                                 }
-                                
+
                                 DeviceStateUpdate::TouchScreenSwipe((sx, sy), (ex, ey)) => {
                                     println!("Touch Screen swipe from {sx}, {sy} to {ex}, {ey}")
                                 }
