@@ -11,7 +11,7 @@ async fn main() {
     match new_hidapi() {
         Ok(hid) => {
             // Refresh device list
-            for (kind, serial) in list_devices(&hid, false) {
+            for (kind, serial) in list_devices(&hid) {
                 println!("{:?} {} {}", kind, serial, kind.product_id());
 
                 // Connect to the device
@@ -25,8 +25,6 @@ async fn main() {
                 // Use image-rs to load an image
                 let image = open("no-place-like-localhost.jpg").unwrap();
                 let alternative = image.grayscale().brighten(-50);
-
-                // device.set_logo_image(image.clone()).await.unwrap();
 
                 println!("Key count: {}", kind.key_count());
                 // Write it to the device
@@ -134,8 +132,6 @@ async fn main() {
                 }
 
                 drop(reader);
-
-                device.shutdown().await.ok();
             }
         }
         Err(e) => eprintln!("Failed to create HidApi instance: {}", e),

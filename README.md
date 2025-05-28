@@ -63,7 +63,7 @@ if device.updated {
 - [x] Reading buttons with async
 
 ## Supported Devices
-As it stands, this library should support the following devices. Please note that non-Elgato devices are only supported by consumers of this library that enable the support for them.
+As it stands, this library should support the following devices.
 - Stream Deck Original
 - Stream Deck Original V2
 - Stream Deck XL
@@ -74,13 +74,5 @@ As it stands, this library should support the following devices. Please note tha
 - Stream Deck Pedal
 - Stream Deck Plus (thanks to [node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck))
 - Stream Deck Neo (thanks to [@ejiektpobehuk](https://github.com/ejiektpobehuk), [@AkechiShiro](https://github.com/AkechiShiro) and [node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck))
-- Ajazz AKP153 (thanks to [@ZCube](https://github.com/ZCube))
-- Ajazz AKP153E (thanks to [@teras](https://github.com/teras))
-- Ajazz AKP153R (thanks to [@teras](https://github.com/teras), [@damnkrat](https://github.com/damnkrat) and [@4ndv](https://github.com/4ndv))
-- Ajazz AKP815 (thanks to [@teras](https://github.com/teras))
-- Ajazz AKP03 (thanks to [@4ndv](https://github.com/4ndv) and [@happyme531](https://github.com/happyme531))
-- Ajazz AKP03E (thanks to [@4ndv](https://github.com/4ndv) and [@geekosaurusR3x](https://github.com/geekosaurusR3x))
-- Ajazz AKP03R (thanks to [@4ndv](https://github.com/4ndv))
-- MiraBox HSV293S (thanks to [@czyz](https://github.com/czyz))
-- MiraBox DK0108D (thanks to [@ikegam](https://github.com/ikegam))
-- MiraBox N3EN (thanks to [@JensHeinrich](https://github.com/JensHeinrich))
+
+Support for non-Elgato (Mirabox/Ajazz) devices has been removed in v0.11. If you wish to use these devices, please use the `mirajazz` crate, or use v0.10.2 of this crate.

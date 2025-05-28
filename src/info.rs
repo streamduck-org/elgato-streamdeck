@@ -22,46 +22,7 @@ pub const PID_STREAMDECK_PEDAL: u16 = 0x0086;
 /// Product ID of Stream Deck Plus
 pub const PID_STREAMDECK_PLUS: u16 = 0x0084;
 
-/// A Mirabox vendor ID
-pub const MIRABOX_VENDOR_ID_1: u16 = 0x5548;
-
-/// Product ID of Ajazz AKP153
-pub const PID_AJAZZ_AKP153: u16 = 0x6674;
-
-/// Product ID of Ajazz AKP815
-pub const PID_AJAZZ_AKP815: u16 = 0x6672;
-
-/// Product ID of the "FHOOU" (front label) and "MiraBox HSV293S" (rear label). Seems just like an AKP153.
-pub const PID_MIRABOX_HSV293S: u16 = 0x6670;
-
-/// Product ID of MiraBox DK0108D
-pub const PID_MIRABOX_DK0108D: u16 = 0x6667;
-
-/// A Mirabox vendor ID
-pub const MIRABOX_VENDOR_ID_2: u16 = 0x0300;
-
-/// Product ID of Ajazz AKP153E
-pub const PID_AJAZZ_AKP153E: u16 = 0x1010;
-
-/// Product ID of Ajazz AKP153R
-pub const PID_AJAZZ_AKP153R: u16 = 0x1020;
-
-/// Product ID of Ajazz AKP03
-pub const PID_AJAZZ_AKP03: u16 = 0x1001;
-
-/// Product ID of Ajazz AKP03E
-pub const PID_AJAZZ_AKP03E: u16 = 0x3002;
-
-/// Product ID of Ajazz AKP03R
-pub const PID_AJAZZ_AKP03R: u16 = 0x1003;
-
-/// A Mirabox vendor ID
-pub const MIRABOX_VENDOR_ID_3: u16 = 0x6603;
-
-/// Product ID of the "FHOOU" (front label) and "MiraBox N3" (rear label) and "MiraBox N3EN" as per Mirabox's repository. Seems just like an AKP03.
-pub const PID_MIRABOX_N3EN: u16 = 0x1003;
-
-const RECOGNIZED_VENDORS: [u16; 4] = [ELGATO_VENDOR_ID, MIRABOX_VENDOR_ID_1, MIRABOX_VENDOR_ID_2, MIRABOX_VENDOR_ID_3];
+const RECOGNIZED_VENDORS: [u16; 1] = [ELGATO_VENDOR_ID];
 
 /// Returns true for vendors IDs that are recognized by the library
 pub fn is_vendor_familiar(vendor: &u16) -> bool {
@@ -91,26 +52,6 @@ pub enum Kind {
     Pedal,
     /// Stream Deck Plus
     Plus,
-    /// Ajazz AKP153
-    Akp153,
-    /// Ajazz AKP153E
-    Akp153E,
-    /// Ajazz AKP153R
-    Akp153R,
-    /// Ajazz AKP815
-    Akp815,
-    /// Ajazz AKP03
-    Akp03,
-    /// Ajazz AKP03E
-    Akp03E,
-    /// Ajazz AKP03R
-    Akp03R,
-    /// MiraBox HSV293S
-    MiraBoxHSV293S,
-    /// MiraBox DK0108D
-    MiraBoxDK0108D,
-    /// MiraBox N3EN
-    MiraBoxN3EN,
 }
 
 impl Kind {
@@ -130,29 +71,6 @@ impl Kind {
                 PID_STREAMDECK_PLUS => Some(Kind::Plus),
                 _ => None,
             },
-
-            MIRABOX_VENDOR_ID_1 => match pid {
-                PID_AJAZZ_AKP153 => Some(Kind::Akp153),
-                PID_AJAZZ_AKP815 => Some(Kind::Akp815),
-                PID_MIRABOX_HSV293S => Some(Kind::MiraBoxHSV293S),
-                PID_MIRABOX_DK0108D => Some(Kind::MiraBoxDK0108D),
-                _ => None,
-            },
-
-            MIRABOX_VENDOR_ID_2 => match pid {
-                PID_AJAZZ_AKP153E => Some(Kind::Akp153E),
-                PID_AJAZZ_AKP153R => Some(Kind::Akp153R),
-                PID_AJAZZ_AKP03 => Some(Kind::Akp03),
-                PID_AJAZZ_AKP03E => Some(Kind::Akp03E),
-                PID_AJAZZ_AKP03R => Some(Kind::Akp03R),
-                _ => None,
-            },
-
-            MIRABOX_VENDOR_ID_3 => match pid {
-                PID_MIRABOX_N3EN => Some(Kind::MiraBoxN3EN),
-                _ => None,
-            },
-
             _ => None,
         }
     }
@@ -170,16 +88,6 @@ impl Kind {
             Kind::Neo => PID_STREAMDECK_NEO,
             Kind::Pedal => PID_STREAMDECK_PEDAL,
             Kind::Plus => PID_STREAMDECK_PLUS,
-            Kind::Akp153 => PID_AJAZZ_AKP153,
-            Kind::Akp153E => PID_AJAZZ_AKP153E,
-            Kind::Akp153R => PID_AJAZZ_AKP153R,
-            Kind::Akp815 => PID_AJAZZ_AKP815,
-            Kind::Akp03 => PID_AJAZZ_AKP03,
-            Kind::Akp03E => PID_AJAZZ_AKP03E,
-            Kind::Akp03R => PID_AJAZZ_AKP03R,
-            Kind::MiraBoxHSV293S => PID_MIRABOX_HSV293S,
-            Kind::MiraBoxDK0108D => PID_MIRABOX_DK0108D,
-            Kind::MiraBoxN3EN => PID_MIRABOX_N3EN,
         }
     }
 
@@ -196,16 +104,6 @@ impl Kind {
             Kind::Neo => ELGATO_VENDOR_ID,
             Kind::Pedal => ELGATO_VENDOR_ID,
             Kind::Plus => ELGATO_VENDOR_ID,
-            Kind::Akp153 => MIRABOX_VENDOR_ID_1,
-            Kind::Akp153E => MIRABOX_VENDOR_ID_2,
-            Kind::Akp153R => MIRABOX_VENDOR_ID_2,
-            Kind::Akp815 => MIRABOX_VENDOR_ID_1,
-            Kind::Akp03 => MIRABOX_VENDOR_ID_2,
-            Kind::Akp03E => MIRABOX_VENDOR_ID_2,
-            Kind::Akp03R => MIRABOX_VENDOR_ID_2,
-            Kind::MiraBoxHSV293S => MIRABOX_VENDOR_ID_1,
-            Kind::MiraBoxDK0108D => MIRABOX_VENDOR_ID_1,
-            Kind::MiraBoxN3EN => MIRABOX_VENDOR_ID_3,
         }
     }
 
@@ -217,10 +115,6 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 32,
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 8,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => 15 + 3,
-            Kind::Akp815 => 15,
-            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN => 6 + 3,
-            Kind::MiraBoxDK0108D => 12,
         }
     }
 
@@ -232,10 +126,6 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 4,
             Kind::Pedal => 1,
             Kind::Neo | Kind::Plus => 2,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => 3,
-            Kind::Akp815 => 5,
-            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN => 3,
-            Kind::MiraBoxDK0108D => 3,
         }
     }
 
@@ -247,10 +137,6 @@ impl Kind {
             Kind::Xl | Kind::XlV2 => 8,
             Kind::Pedal => 3,
             Kind::Neo | Kind::Plus => 4,
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => 6,
-            Kind::Akp815 => 3,
-            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN => 3,
-            Kind::MiraBoxDK0108D => 4,
         }
     }
 
@@ -258,7 +144,6 @@ impl Kind {
     pub fn encoder_count(&self) -> u8 {
         match self {
             Kind::Plus => 4,
-            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN => 3,
             _ => 0,
         }
     }
@@ -276,9 +161,6 @@ impl Kind {
         match self {
             Kind::Plus => Some((800, 100)),
             Kind::Neo => Some((248, 58)),
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => Some((854, 480)),
-            Kind::Akp815 => Some((800, 480)),
-            Kind::MiraBoxDK0108D => Some((800, 480)),
             _ => None,
         }
     }
@@ -332,41 +214,6 @@ impl Kind {
             },
 
             Kind::Pedal => ImageFormat::default(),
-
-            Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::MiraBoxHSV293S => ImageFormat {
-                mode: ImageMode::JPEG,
-                size: (85, 85),
-                rotation: ImageRotation::Rot90,
-                mirror: ImageMirroring::Both,
-            },
-
-            Kind::Akp815 => ImageFormat {
-                mode: ImageMode::JPEG,
-                size: (100, 100),
-                rotation: ImageRotation::Rot180,
-                mirror: ImageMirroring::None,
-            },
-
-            Kind::Akp03 | Kind::Akp03E | Kind::Akp03R => ImageFormat {
-                mode: ImageMode::JPEG,
-                size: (60, 60),
-                rotation: ImageRotation::Rot0,
-                mirror: ImageMirroring::None,
-            },
-
-            Kind::MiraBoxN3EN => ImageFormat {
-                mode: ImageMode::JPEG,
-                size: (60, 60),
-                rotation: ImageRotation::Rot90,
-                mirror: ImageMirroring::None,
-            },
-
-            Kind::MiraBoxDK0108D => ImageFormat {
-                mode: ImageMode::JPEG,
-                size: (72, 72),
-                rotation: ImageRotation::Rot180,
-                mirror: ImageMirroring::Both,
-            },
         }
     }
 
@@ -500,23 +347,8 @@ impl Kind {
                 0xd9,
             ],
 
-            _ => vec![],
+            Kind::Pedal => vec![],
         }
-    }
-
-    /// Returns true for Mirabox devices with 512 byte packet length
-    pub fn is_mirabox_v1(&self) -> bool {
-        matches!(self, Kind::Akp153 | Kind::Akp153E | Kind::Akp153R | Kind::Akp815 | Kind::MiraBoxHSV293S | Kind::MiraBoxDK0108D)
-    }
-
-    /// Returns true for Mirabox devices with 1024 byte packet length
-    pub fn is_mirabox_v2(&self) -> bool {
-        matches!(self, Kind::Akp03 | Kind::Akp03E | Kind::Akp03R | Kind::MiraBoxN3EN)
-    }
-
-    /// Returns true for Mirabox devices
-    pub fn is_mirabox(&self) -> bool {
-        self.is_mirabox_v1() || self.is_mirabox_v2()
     }
 }
 

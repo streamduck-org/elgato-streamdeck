@@ -23,8 +23,8 @@ pub fn refresh_device_list_async(hidapi: &mut HidApi) -> HidResult<()> {
 /// can be safely ran inside [multi_thread](tokio::runtime::Builder::new_multi_thread) runtime
 ///
 /// **WARNING:** To refresh the list, use [refresh_device_list]
-pub fn list_devices_async(hidapi: &HidApi, only_elgato: bool) -> Vec<(Kind, String)> {
-    block_in_place(move || list_devices(hidapi, only_elgato))
+pub fn list_devices_async(hidapi: &HidApi) -> Vec<(Kind, String)> {
+    block_in_place(move || list_devices(hidapi))
 }
 
 /// Stream Deck interface suitable to be used in async, uses [block_in_place](block_in_place)
@@ -156,34 +156,10 @@ impl AsyncStreamDeck {
         block_in_place(move || device.write_image(key, &image))
     }
 
-    /// Set logo image
-    pub async fn set_logo_image(&self, image: DynamicImage) -> Result<(), StreamDeckError> {
-        let device = self.device.lock().await;
-        block_in_place(move || device.set_logo_image(image))
-    }
-
     /// Sets specified touch point's led strip color
     pub async fn set_touchpoint_color(&self, point: u8, red: u8, green: u8, blue: u8) -> Result<(), StreamDeckError> {
         let device = self.device.lock().await;
         block_in_place(move || device.set_touchpoint_color(point, red, green, blue))
-    }
-
-    /// Sleeps the device
-    pub async fn sleep(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.lock().await;
-        block_in_place(move || device.sleep())
-    }
-
-    /// Make periodic events to the device, to keep it alive
-    pub async fn keep_alive(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.lock().await;
-        block_in_place(move || device.keep_alive())
-    }
-
-    /// Shutdown the device
-    pub async fn shutdown(&self) -> Result<(), StreamDeckError> {
-        let device = self.device.lock().await;
-        block_in_place(move || device.shutdown())
     }
 
     /// Flushes the button's image to the device
@@ -221,12 +197,7 @@ impl AsyncDeviceStateReader {
         match input {
             StreamDeckInput::ButtonStateChange(buttons) => {
                 for (index, (their, mine)) in zip(buttons.iter(), my_states.buttons.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() && self.device.kind != Kind::MiraBoxN3EN {
-                        if *their {
-                            updates.push(DeviceStateUpdate::ButtonDown(index as u8));
-                            updates.push(DeviceStateUpdate::ButtonUp(index as u8));
-                        }
-                    } else if *their != *mine {
+                    if *their != *mine {
                         if index < self.device.kind.key_count() as usize {
                             if *their {
                                 updates.push(DeviceStateUpdate::ButtonDown(index as u8));
@@ -246,12 +217,7 @@ impl AsyncDeviceStateReader {
 
             StreamDeckInput::EncoderStateChange(encoders) => {
                 for (index, (their, mine)) in zip(encoders.iter(), my_states.encoders.iter()).enumerate() {
-                    if self.device.kind.is_mirabox() && self.device.kind != Kind::MiraBoxN3EN {
-                        if *their {
-                            updates.push(DeviceStateUpdate::EncoderDown(index as u8));
-                            updates.push(DeviceStateUpdate::EncoderUp(index as u8));
-                        }
-                    } else if *their != *mine {
+                    if *their != *mine {
                         if *their {
                             updates.push(DeviceStateUpdate::EncoderDown(index as u8));
                         } else {
