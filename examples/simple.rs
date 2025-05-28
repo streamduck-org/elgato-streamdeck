@@ -22,16 +22,16 @@ fn main() {
                 device.set_brightness(50).unwrap();
                 device.clear_all_button_images().unwrap();
                 // Use image-rs to load an image
-                let image = open("no-place-like-localhost.jpg").unwrap();
+                let image = open("examples/no-place-like-localhost.jpg").unwrap();
 
                 println!("Key count: {}", kind.key_count());
                 // Write it to the device
-                for i in 0..kind.key_count() as u8 {
+                for i in 0..kind.key_count() {
                     device.set_button_image(i, image.clone()).unwrap();
                 }
 
                 println!("Touch point count: {}", kind.touchpoint_count());
-                for i in 0..kind.touchpoint_count() as u8 {
+                for i in 0..kind.touchpoint_count() {
                     device.set_touchpoint_color(i, 255, 255, 255).unwrap();
                 }
 
@@ -53,6 +53,7 @@ fn main() {
                 // Flush
                 device.flush().unwrap();
 
+                #[allow(clippy::arc_with_non_send_sync)]
                 let device = Arc::new(device);
                 {
                     let reader = device.get_reader();

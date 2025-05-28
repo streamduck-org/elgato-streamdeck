@@ -1,3 +1,6 @@
+#[cfg(not(feature = "async"))]
+compile_error!("The `async` feature must be enabled to compile this example.");
+
 use std::time::Duration;
 use image::open;
 
@@ -23,17 +26,17 @@ async fn main() {
                 device.clear_all_button_images().await.unwrap();
 
                 // Use image-rs to load an image
-                let image = open("no-place-like-localhost.jpg").unwrap();
+                let image = open("examples/no-place-like-localhost.jpg").unwrap();
                 let alternative = image.grayscale().brighten(-50);
 
                 println!("Key count: {}", kind.key_count());
                 // Write it to the device
-                for i in 0..kind.key_count() as u8 {
+                for i in 0..kind.key_count() {
                     device.set_button_image(i, image.clone()).await.unwrap();
                 }
 
                 println!("Touch point count: {}", kind.touchpoint_count());
-                for i in 0..kind.touchpoint_count() as u8 {
+                for i in 0..kind.touchpoint_count() {
                     device.set_touchpoint_color(i, 255, 255, 255).await.unwrap();
                 }
 
@@ -72,7 +75,7 @@ async fn main() {
                         previous = index;
 
                         index += 1;
-                        if index >= kind.key_count() as u8 {
+                        if index >= kind.key_count() {
                             index = 0;
                         }
                     }
