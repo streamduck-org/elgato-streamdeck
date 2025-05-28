@@ -1,10 +1,9 @@
 # elgato-streamdeck
-Rust library for interacting with Elgato Stream Deck and other stream controller hardware.
+Rust library for interacting with Elgato Stream Deck hardware.
 Heavily based on [python-elgato-streamdeck](https://github.com/abcminiuser/python-elgato-streamdeck) and partially on
-[streamdeck library for rust](https://github.com/ryankurte/rust-streamdeck).
+[rust-streamdeck](https://github.com/ryankurte/rust-streamdeck).
 
-This library was made as a better designed alternative to streamdeck library for Rust.
-I just took code from both of the libraries and made it more pleasant to use.
+This library was made by [@TheJebForge](https://github.com/TheJebForge) as a better-designed alternative to rust-streamdeck, taking code from both of the libraries and making it more pleasant to use.
 
 ## udev rules for Linux
 If you're using systemd on your system, you might have to install udev rules to allow connecting to devices from userspace.
